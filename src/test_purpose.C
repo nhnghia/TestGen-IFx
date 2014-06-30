@@ -19,7 +19,7 @@
 
 	purposes[0].numSignals = 1;
 	purposes[0].process = "{client}0";
-	purposes[0].source = NULL;
+	purposes[0].source = "s0_moving";
 	purposes[0].target = NULL;
 
 	signalData signal0 = {"work","informal",NULL};

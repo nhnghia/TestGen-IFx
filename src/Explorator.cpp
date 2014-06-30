@@ -1,22 +1,13 @@
 /*
- ManageStopConditions.C
-
- Last modification by Mounir LALLALI mlallali@gmail.com
- 02/02/2009
-
+ * Explorator.cpp
+ *
+ *  Created on: 27 juin 2014
+ *      Author: nhnghia
  */
 
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include "mainExplorator.h"
-#include "state_queue.h"
-#include "simulator.h"
-#include <typeinfo>
-/**
- * Nghia
- */
+#include "Explorator.h"
+#include "Tool.h"
+
 void xmlize(IfObject *obj, FILE * file) {
 	/*
 	 printf(".");
@@ -49,12 +40,40 @@ char* getState(IfInstance *s) {
 	return "s";
 }
 
-/* _____________________________________________________________________________
- FUNCTION: SetTestPurposes
+namespace tsp {
 
- This function affects the variables concerned in the Test Purposes
- _____________________________________________________________________________
- */
+Explorator::Explorator(const IfEngine* engine) :
+		IfDriver(engine) {
+	maxDepth = 0;
+	currentDepth = 0;
+
+	setTestPurposes();
+
+	stateNumber = 0;
+
+	srand(static_cast<unsigned>(time(NULL)));
+	srand((unsigned) time(0));
+
+	output_label.open("output.label", ios_base::app);
+	output_stat.open("output.stat", ios_base::app);
+
+	if (!output_label)
+		printf("\n >>> File 'output.label' not open ! \n");
+	if (!output_stat)
+		printf("\n >>> File 'output.stat' not open ! \n");
+}
+
+Explorator::~Explorator() {
+	output_label.close();
+	output_stat.close();
+}
+
+void Explorator::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
+}
+
+void Explorator::visitAll(int depthlim) {
+	maxDepth = depthlim;
+}
 
 void Explorator::setTestPurposes() {
 #include "test_purpose.C"
@@ -496,6 +515,7 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 		purposes[i].visited = false;
 
 	while (k < numPurposes) {
+
 		hit = true;
 
 		while (k < numPurposes
@@ -509,8 +529,8 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 				if (tmpDepth == -1)
 					hit = false;
 			}
-
 			if (hit && purposes[k].process != NULL) {
+
 				sourceStateInstance = checkProcessInstance(sourceState,
 						purposes[k].process, depth);
 				if (sourceStateInstance == NULL) {
@@ -974,7 +994,7 @@ long int Explorator::checkSignal(bool order, IfLabel* label, int ind,
 	return hitDepth;
 }
 
-/*
+/**
  _____________________________________________________________________________
  FUNCTION: checkProcessInstance
  Verify a Process Instance Condition: name and id
@@ -983,50 +1003,35 @@ long int Explorator::checkSignal(bool order, IfLabel* label, int ind,
 
 IfInstance* Explorator::checkProcessInstance(const IfConfig *state,
 		char* processInstanceName, long int depth) {
+
 	string s;
 	int l = 0;
 	int i = 0;
 	int j = 0;
-	char procname[VALUE];
-	FILE *f1, *f2;
 
-	if (processInstanceName != NULL) {
-		struct IfConfig::Chunk *c1 = state->getAt(j);
+	if (processInstanceName == NULL)
+		return NULL;
 
-		while (c1 != NULL) {
-			l = c1->getLength();
-			while (i < l) {
-				IfInstance* c2 = c1->getAt(i);
-				if (c2 != NULL) {
-					f1 = fopen("output.xml", "a");
-					if (f1 == NULL) {
-						cerr << "cannot open output.xml !" << endl;
-					} else {
-						//nghia
-						//c2->xmlize(f1);
-						cout << typeid(c2).name();
+	struct IfConfig::Chunk *c1 = state->getAt(j);
+	while (c1 != NULL) {
+		l = c1->getLength();
+		while (i < l) {
+			IfInstance* c2 = c1->getAt(i);
+			if (c2 == NULL)
+				continue;
 
-						xmlize(c2, f1);
-						//printf("NGHIA 888");
-						fclose(f1);
-						system("$TestGenIF/lib/get-process-name.sh %s");
-						f2 = fopen("output.process", "r");
-						if (f2 == NULL) {
-							cerr << "cannot open output.value !" << endl;
-						} else {
-							fscanf(f2, "%s", procname);
-							fclose(f2);
-							if (strcmp(procname, processInstanceName) == 0)
-								return c2;
-						}
-					}
+			string txt = c2->string();
+			vector<string> el = Tool::split(txt, '\t');
+			for (string procname : el){
+				if (procname.compare(processInstanceName) == 0){
+					return c2;
 				}
-				i++;
 			}
-			j++;
-			c1 = state->getAt(j);
-			i = 0;
+			i++;
 		}
+		j++;
+		c1 = state->getAt(j);
+		i = 0;
 	}
 	return NULL;
 }
@@ -1040,19 +1045,21 @@ IfInstance* Explorator::checkProcessInstance(const IfConfig *state,
 
 long int Explorator::checkState(IfInstance *state, char* searchedState,
 		long int depth) {
+	if (searchedState == NULL || state == NULL)
+		return -1;
+
 	string s;
-	long int hitDepth = -1;
-
-	if (searchedState != NULL && state != NULL) {
-
-		//if ((state->getState()) != NULL) {
-		if ((getState(state)) != NULL) {
-			s = getState(state);
-			if (s == searchedState)
-				return depth;
-		}
+	cout <<"OK" <<endl;
+	cout <<endl <<searchedState <<endl;
+	cout <<state->string() <<endl;
+	//if (state->i)
+//TODO to complete
+	{
+		//s = getState(state);
+		if (s == searchedState)
+			return depth;
 	}
-	return hitDepth;
+	return -1;
 }
 
 /*
@@ -1148,32 +1155,209 @@ void Explorator::getClockId(IfInstance *state, char *searchedClock, int *id) {
 
 int Explorator::getTypeSignal(char* type) {
 	if (strcmp(type, "skip") == 0)
-		return 0;
+		return IfEvent::SKIP;
 	else if (strcmp(type, "informal") == 0)
-		return 1;
+		return IfEvent::INFORMAL;
 	else if (strcmp(type, "task") == 0)
-		return 2;
+		return IfEvent::TASK;
 	else if (strcmp(type, "set") == 0)
-		return 3;
+		return IfEvent::SET;
 	else if (strcmp(type, "reset") == 0)
-		return 4;
+		return IfEvent::RESET;
 	else if (strcmp(type, "input") == 0)
-		return 5;
+		return IfEvent::INPUT;
 	else if (strcmp(type, "output") == 0)
-		return 6;
+		return IfEvent::OUTPUT;
 	else if (strcmp(type, "call") == 0)
-		return 7;
+		return IfEvent::CALL;
 	else if (strcmp(type, "fork") == 0)
-		return 8;
+		return IfEvent::FORK;
 	else if (strcmp(type, "kill") == 0)
-		return 9;
+		return IfEvent::KILL;
 	else if (strcmp(type, "tick") == 0)
-		return 10;
+		return IfEvent::TICK;
 	else if (strcmp(type, "deliver") == 0)
-		return 11;
+		return IfEvent::DELIVER;
 	else if (strcmp(type, "import") == 0)
-		return 12;
+		return IfEvent::IMPORT;
 	else
 		return -1;
 }
 
+void Explorator::saveStat(short int i) {
+
+	if (!output_stat) {
+		printf("\n #### File 'output.label' not open #### \n");
+
+	} else {
+		output_stat << "	Visited states: " << label_id << endl;
+//TODO
+		//output_stat << "	Number of executed Jumps: " << jump_counter << endl;
+
+		if (i == 1)
+			output_stat << "	Test generation success: satisfied test purposes ("
+					<< numFoundedTestPurposes << "/" << numTestPurposes << ")"
+					<< endl;
+		else
+			output_stat << "	Test generation fail: satisfied test purposes ("
+					<< numFoundedTestPurposes << "/" << numTestPurposes << ")"
+					<< endl;
+	}
+}
+
+void Explorator::saveTestPurposes() {
+	int i;
+	if (!output_stat) {
+		printf("\n >>> File 'output.stat' not open ! \n");
+	} else {
+
+		if (numTestPurposes > 0) {
+			output_stat << "\tTest Purposes are TP = {";
+
+			for (i = 1; i < numTestPurposes; i++)
+				output_stat << "tp" << i << ",";
+			output_stat << "tp" << numTestPurposes << "}";
+
+			if (numOrdPurposes > 0) {
+				output_stat << " such that ";
+				for (i = 1; i < numOrdPurposes; i++)
+					output_stat << "tp" << i << " < ";
+				output_stat << "tp" << numTestPurposes << endl;
+				saveOrdPurposes();
+			} else
+				output_stat << endl;
+
+			if (numPurposes > 0) {
+				savePurposes();
+			}
+
+		}
+	}
+}
+
+void Explorator::savePurposes() {
+	int i, j;
+	for (i = 0; i < numPurposes; i++) {
+		output_stat << "\t  Test Purpose tp" << i + 1 + numOrdPurposes
+				<< " is satisfied at Depth " << purposes[i].depth << " :"
+				<< endl;
+		if (purposes[i].source != NULL)
+			output_stat << "\t \t\"Source State = " << purposes[i].source
+					<< "\"" << endl;
+		if (purposes[i].target != NULL)
+			output_stat << "\t \t\"Target State = " << purposes[i].target
+					<< "\"" << endl;
+
+		if (purposes[i].numSignals > 0) {
+			for (j = 0; j < purposes[i].numSignals; j++) {
+				output_stat << "\t \t\"Signal " << purposes[i].signals[j].type
+						<< " " << purposes[i].signals[j].name;
+				if (purposes[i].signals[j].parameter != NULL)
+					output_stat << purposes[i].signals[j].parameter;
+				output_stat << "\"" << endl;
+			}
+		}
+		if (purposes[i].numVariables > 0) {
+			for (j = 0; j < purposes[i].numVariables; j++) {
+				output_stat << "\t \t\"Variable "
+						<< purposes[i].variables[j].name << " = "
+						<< purposes[i].variables[j].value << "\"" << endl;
+			}
+		}
+		if (purposes[i].numActiveClocks > 0) {
+			for (j = 0; j < purposes[i].numActiveClocks; j++) {
+				if (purposes[i].active_clocks[j].status == false) {
+					output_stat << "\t \t\"Clock "
+							<< purposes[i].active_clocks[j].name
+							<< " is inactive " << "\"" << endl;
+				} else if (purposes[i].active_clocks[j].status == true) {
+					output_stat << "\t \t\"Clock "
+							<< purposes[i].active_clocks[j].name
+							<< " is active " << "\"" << endl;
+				}
+			}
+		}
+		if (purposes[i].numBoundClocks > 0) {
+			for (j = 0; j < purposes[i].numBoundClocks; j++)
+				output_stat << "\t \t\"Clock " << purposes[i].clocks[j].name
+						<< " = " << purposes[i].clocks[j].bound << "\"" << endl;
+		}
+	}
+}
+
+void Explorator::saveOrdPurposes() {
+	int i, j;
+	for (i = 0; i < numOrdPurposes; i++) {
+		output_stat << "\t  Test Purpose tp" << i + 1
+				<< " is satisfied at Depth " << ordPurposes[i].depth << " :"
+				<< endl;
+
+		if (ordPurposes[i].source != NULL)
+			output_stat << "\t \t\"Source State = " << ordPurposes[i].source
+					<< "\"" << endl;
+
+		if (ordPurposes[i].target != NULL)
+			output_stat << "\t \t\"Target State = " << ordPurposes[i].target
+					<< "\"" << endl;
+
+		if (ordPurposes[i].numSignals > 0) {
+			for (j = 0; j < ordPurposes[i].numSignals; j++) {
+				output_stat << "\t \t\"Signal "
+						<< ordPurposes[i].signals[j].type << " "
+						<< ordPurposes[i].signals[j].name;
+				if (ordPurposes[i].signals[j].parameter != NULL)
+					output_stat << ordPurposes[i].signals[j].parameter;
+				output_stat << "\"" << endl;
+			}
+		}
+		if (ordPurposes[i].numVariables > 0) {
+			for (j = 0; j < ordPurposes[i].numVariables; j++) {
+				output_stat << "\t \t\"Variable "
+						<< ordPurposes[i].variables[j].name << " = "
+						<< ordPurposes[i].variables[j].value << "\"" << endl;
+			}
+		}
+		if (ordPurposes[i].numActiveClocks > 0) {
+			for (j = 0; j < ordPurposes[i].numActiveClocks; j++) {
+				if (ordPurposes[i].active_clocks[j].status == false) {
+					output_stat << "\t \t\"Clock "
+							<< ordPurposes[i].active_clocks[j].name
+							<< " is inactive " << "\"" << endl;
+				} else if (ordPurposes[i].active_clocks[j].status == true) {
+					output_stat << "\t \t\"Clock "
+							<< ordPurposes[i].active_clocks[j].name
+							<< " is active " << "\"" << endl;
+				}
+			}
+		}
+		if (ordPurposes[i].numBoundClocks > 0) {
+			for (j = 0; j < ordPurposes[i].numBoundClocks; j++)
+				output_stat << "\t \t\"Clock " << ordPurposes[i].clocks[j].name
+						<< " = " << ordPurposes[i].clocks[j].bound << "\""
+						<< endl;
+		}
+	}
+}
+
+void Explorator::print_label(long int label_id, IfLabel* label) {
+	if (!output_label) {
+		printf("\n #### File 'output.label' not open #### \n");
+	} else {
+		output_label << label_id << ":";
+		output_label << label->string() << endl;
+	}
+}
+
+int Time::print(int i, int bound) {
+	if (bound != -1) {
+		if ((m_values.getAt(i) == bound)) {
+			bound = -1;
+			return (1);
+		} else
+			return (0);
+	} else
+		//it means that we are only interested in get the time of this function
+		return (m_values.getAt(i));
+}
+
+} /* namespace tsp */

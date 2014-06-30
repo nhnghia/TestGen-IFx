@@ -1,27 +1,29 @@
 CC = g++
+AR = ar
 CFLAGS = -Wall -O3 -DABSTRACT -fno-stack-protector -Wno-write-strings -Wno-deprecated -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-parameter -Wno-overloaded-virtual -g -rdynamic
 
-.SUFFIXES: .o .C .h
+.SUFFIXES: .o .cpp .h
 
-.C.o:	
-	${CC} -c -o $*.o $(CFLAGS) -I${IF}/src/simulator $*.C -lstdc++
+SRC_1 = CallTrace.cpp Event.cpp Exhaustive.cpp Explorator.cpp HitOrJump.cpp TestCase.cpp TestPurpose.cpp Tool.cpp 
+SRC_2 = state_list.C state_queue.C state_stack.C 	
 
+OBJS = $(SRC_1:.cpp=.o) $(SRC_2:.C=.o)
 
-all: 
-	${CC} -c -o Bfs.o $(CFLAGS) -I${IF}/src/simulator Bfs.C
-	${CC} -c -o Dfs.o $(CFLAGS) -I${IF}/src/simulator Dfs.C
-	${CC} -c -o ManageOutputFiles.o $(CFLAGS) -I${IF}/src/simulator ManageOutputFiles.C
-	${CC} -c -o mainExplorator.o $(CFLAGS) -I${IF}/src/simulator mainExplorator.C
-	${CC} -c -o ManageStopConditions.o $(CFLAGS) -I${IF}/src/simulator ManageStopConditions.C
-	${CC} -c -o state_list.o $(CFLAGS) -I${IF}/src/simulator state_list.C
-	${CC} -c -o state_queue.o $(CFLAGS) -I${IF}/src/simulator state_queue.C
-	${CC} -c -o state_stack.o $(CFLAGS) -I${IF}/src/simulator state_stack.C
+all: $(OBJS)
+	${CC} -c -o main.o $(CFLAGS) -I${IF}/src/simulator main.C
+	
+$(OBJS): %.o : %.h
 
-tp: 
-	${CC} -c -o ManageStopConditions.o $(CFLAGS) -I${IF}/src/simulator ManageStopConditions.C -lstdc++
+.cpp.o:
+	${CC} $(CFLAGS) -I${IF}/src/simulator -c $<
 
-install:
-	$(shell mv *.o ../lib)
-
+.C.o:
+	${CC} $(CFLAGS) -I${IF}/src/simulator -c $<
+  
 clean:
-	-rm -f *~ *.o 
+	#rm -f $(OBJS)
+tp:
+	
+install:
+	cp $(OBJS) ../lib
+	#mv *.o ../lib

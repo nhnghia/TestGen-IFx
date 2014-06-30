@@ -1,42 +1,36 @@
-/*  
-
- mainExplorator.h : the definition of the functions that belongs to "mainExplorator.C"
-
- Last modification by Mounir LALLALI mlallali@gmail.com
- 02/02/2009
-
- Main file: mainExplorator.C
-
- Defines abstract graph exploration
-
+/*
+ * Explorator.h
+ *
+ *  Created on: 27 juin 2014
+ *      Author: nhnghia
  */
 
-#ifndef __TEMP_H__
-#define __TEMP_H__
+#ifndef EXPLORATOR_H_
+#define EXPLORATOR_H_
 
-#include "simulator.h"
 #include "state_queue.h"
 #include "state_list.h"
 #include "state_stack.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <cstdlib>
 
-#include <execinfo.h>
-class CallTrace {
-public:
-	static void print();
-};
+#include "TestCase.h"
 
-/******** EXPLORATOR ***************************/
+namespace tsp {
 
 class Explorator: public IfDriver {
+public:
+	Explorator(const IfEngine* engine);
+	virtual ~Explorator();
+public:
+	virtual void explore(IfConfig* source, IfLabel* label, IfConfig* target);
+	virtual void visitAll(int depthlim);
 
 public:
-	Explorator(const IfEngine* engine, char* sc_file);
-	virtual ~Explorator();
 	void readTestPurposes(char* sc_file);
 	void printTestPurposes();
 	void printPurposes();
@@ -51,7 +45,6 @@ public:
 protected:
 	void print_label(long int label_id, IfLabel* label);
 	int getTypeSignal(char* type);
-	virtual void visitAll();
 	void setTestPurposes();
 	long int checkTestPurpose(const IfConfig* source, IfLabel* label,
 			const IfConfig* target, long int depth);
@@ -78,6 +71,9 @@ protected:
 			char* signal_type_name, char parameter[300]);
 
 protected:
+	int maxDepth;
+	int currentDepth;
+
 	ofstream output_label;
 	ofstream output_stat;
 	ifstream input_sc;                    //States Format File
@@ -102,7 +98,6 @@ protected:
 
 	int stateNumber;
 	long int label_id;
-	int jump_counter;
 
 	/* GLOBAL VARIABLES */
 
@@ -169,68 +164,6 @@ protected:
 	purposesArray ordPurposes;
 };
 
-/******************** BFS *************************/
-
-/* 
- *
- * bfs_explorator : breadth-first search exploration
- *
- */
-
-class BfsExplorator: public Explorator {
-public:
-	BfsExplorator(const IfEngine* engine, char* sc_file);
-	virtual ~BfsExplorator() {
-	}
-	;
-	void explore(IfConfig* source, IfLabel* label, IfConfig* target);
-	void visitAll(int depthlim);
-	StateNode random_jump();
-
-protected:
-	long int visit(const IfConfig* state, long int depth);
-
-private:
-	StateQueue m_queue;
-	stateQNode state_node;
-	StateList seq;
-	long int raiz;
-	long int hit_position;
-
-};
-
-/******************** DFS *************************/
-
-/*
- *
- * dfs_explorator : depth-first search exploration 
- *
- */
-
-class DfsExplorator: public Explorator {
-
-public:
-	DfsExplorator(const IfEngine* engine, char* sc_file);
-	virtual ~DfsExplorator() {
-	}
-	;
-
-public:
-	void explore(IfConfig* source, IfLabel* label, IfConfig* target);
-	void visitAll(int depthlim);
-
-protected:
-	long int visit(const IfConfig* state, long int depth,
-			long int positionState);
-
-private:
-	StateStack m_stack;
-
-	StateNode state_node;
-	StateList seq;
-	long int raiz;
-};
-
 /***** TIME  *********/
 class Time: public IfDiscreteTime {
 
@@ -238,4 +171,7 @@ public:
 	int print(int i, int bound);
 };
 
-#endif // __TEMP_H__
+
+} /* namespace tsp */
+
+#endif /* EXPLORATOR_H_ */
