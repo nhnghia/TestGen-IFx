@@ -37,15 +37,13 @@ void StateList::put(StateNode p) {
 	_state.insert(i, p);
 }
 
-void StateList::put(IfConfig* s, long int depth, long int father,
-		long int label_id) {
+void StateList::put(IfConfig* s, long int depth, long int father) {
 	list<StateNode>::iterator i = _state.end();
 	StateNode p;
 	p.state = s;
 	p.pos = pos_current;
 	p.depth = depth + 1;
 	p.father = father;
-	p.label_id = label_id;
 	_state.insert(i, p);
 	pos_current++;
 	return;
@@ -183,7 +181,6 @@ void StateList::getPath(StateNode state_node) {
 		do {
 			found = getFather(n, node);
 			if (found) {
-				print_aldebaran_suite(n.father, n.label_id, n.pos);
 				n = node;
 			}
 		} while ((node.father != -1) && (found));
@@ -212,21 +209,4 @@ void StateList::update(StateNode p) {
 		i++;
 	if ((*i).state == p.state)
 		(*i).father = -1;
-}
-
-void StateList::print_aldebaran_suite(long int source, long int label_id,
-		long int target) {
-
-	if (!output_suite) {
-		printf("\n #### File 'OUTPUT.SUITE' not open #### \n");
-
-	} else {
-		output_suite << "(";
-		output_suite << source;
-		output_suite << ",";
-		output_suite << label_id;
-		output_suite << ",";
-		output_suite << target;
-		output_suite << ")" << endl;
-	}
 }

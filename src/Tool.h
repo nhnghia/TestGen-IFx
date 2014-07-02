@@ -10,14 +10,53 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
+#include <xercesc/parsers/XercesDOMParser.hpp>
+#include <xercesc/dom/DOM.hpp>
+#include <xercesc/sax/HandlerBase.hpp>
+#include <xercesc/util/XMLString.hpp>
+#include <iostream>
+#include <xercesc/framework/MemBufInputSource.hpp>
+
+#include "simulator.h"
+
+using namespace std;
+using namespace xercesc;
 namespace tsp {
 
 class Tool {
 public:
 	Tool();
 	virtual ~Tool();
-	static std::vector<std::string> split(const std::string &s, char delim);
+	/**
+	 * split a string separated by "delim"
+	 */
+	static vector<std::string> split(const string &str, char delim);
+
+	/**
+	 * init Xercesc Engine
+	 */
+	static bool initXmlEngine();
+	static bool endXmlEngine();
+
+	static string xmlNode2String(DOMNode *node);
+
+	static DOMDocument *parserXml(string txt);
+
+	/**
+	 * return value of the first attribute that has "name"
+	*/
+	static string getXmlAttributeValue(DOMNode *node, string name);
+
+	/**
+	 * return value of the first element that has "name"
+	 */
+	static string getXmlElementValue(DOMNode *node, string name);
+
+	//IfObject
+	static string ifObject2Xml(IfObject *obj);
+
 };
 
 } /* namespace tsp */

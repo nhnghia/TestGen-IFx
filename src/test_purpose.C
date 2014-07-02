@@ -1,4 +1,3 @@
-
 	numOrdPurposes = 0;
 	numPurposes = 1;
 
@@ -17,11 +16,30 @@
 		purposes[i].depth = -1;
 	}
 
-	purposes[0].numSignals = 1;
-	purposes[0].process = "{client}0";
-	purposes[0].source = "s0_moving";
-	purposes[0].target = NULL;
+	for (i=0; i < numOrdPurposes;i++) 
+	{
+		ordPurposes[i].status = false;
+		ordPurposes[i].visited = false;
+		ordPurposes[i].process = NULL;  
+		ordPurposes[i].source = NULL;      	
+		ordPurposes[i].target = NULL;      	
+    		ordPurposes[i].numBoundClocks = 0;
+    		ordPurposes[i].numActiveClocks = 0;
+    		ordPurposes[i].numSignals = 0;
+		ordPurposes[i].numVariables = 0;
+		ordPurposes[i].depth = -1;
+	}
 
-	signalData signal0 = {"work","informal",NULL};
-	
-	purposes[0].signals[0] = signal0;
+	purposes[0].numBoundClocks = 1;      
+	purposes[0].numSignals = 1;	
+	purposes[0].process = "{Train}0";
+	purposes[0].source = "moving";
+	purposes[0].target = "negotiation";
+
+	signalData signal1 = {"--Timeout TAB","informal", NULL};
+
+	purposes[0].signals[0] = signal1;
+
+	ClockData clock1 = {"c_TAB",5};
+	purposes[0].clocks[0] = clock1;
+

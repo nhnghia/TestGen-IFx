@@ -12,8 +12,13 @@
 #include <string>
 #include <stdlib.h>
 #include <iostream>
+#include <sstream>
 
 #include "simulator.h"
+#include "Tool.h"
+
+using namespace xercesc;
+using namespace std;
 
 namespace tsp {
 using namespace std;
@@ -24,8 +29,15 @@ public :
 	virtual ~Event();
 	virtual string toString();
 
+	/**
+	 * convert IfEvent (input or output) to Event (Input or Output)
+	 */
 	static Event* parser(IfEvent *l);
+private:
 };
+
+
+
 
 class Interaction : public Event{
 public:

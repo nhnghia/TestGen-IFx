@@ -17,6 +17,9 @@
 
 #include "Exhaustive.h"
 #include "CallTrace.h"
+#include "HitOrJump.h"
+#include "Explorator.h"
+#include "RandomExplorator.h"
 
 void handler(int sig) {
 	// print out all the frames to stderr
@@ -51,6 +54,10 @@ int main(int argc, char * argv[]) {
 				traversal = BFS;
 			else if (!strcmp(argv[i], "-dfs"))
 				traversal = DFS;
+			else if (!strcmp(argv[i], "-hoj"))
+				traversal = HIT_OR_JUMP;
+			else if (!strcmp(argv[i], "-ran"))
+				traversal = RANDOM;
 			else if (!strcmp(argv[i], "-p"))
 				sc_file = (i == argc - 1) ? NULL : argv[i + 1];
 			else if (!strcmp(argv[i], "-d")) {
@@ -65,13 +72,17 @@ int main(int argc, char * argv[]) {
 	}
 
 	IfEngine* engine = new IfIterator();
+	tsp::Explorator *expl = NULL;
 	if (traversal == BFS || traversal == DFS) {
-		tsp::Exhaustive* bfs = new tsp::Exhaustive(engine, traversal == BFS);
-		bfs->visitAll(depthlim);
+		expl = new tsp::Exhaustive(engine, traversal == BFS);
 	}
-	if (traversal == DFS) {
-		//DfsExplorator* dfs = new DfsExplorator(engine, sc_file);
-		//dfs->visitAll(depthlim);
+	else if (traversal == HIT_OR_JUMP) {
+		expl = new tsp::HitOrJump(engine);
 	}
+	else if (traversal == RANDOM){
+		expl = new tsp::RandomExplorator(engine);
+	}
+	if (expl)
+		expl->visitAll(depthlim);
 	return 0;
 }

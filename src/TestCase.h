@@ -19,6 +19,11 @@ class TestCase : public std::vector<Event*>{
 public:
 	TestCase();
 	virtual ~TestCase();
+	/**
+	 * add all input/output/delay event in label to the test case
+	 * @return : number of added events
+	 */
+	int add(IfLabel *label);
 	void print(std::ostream&);
 };
 

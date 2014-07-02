@@ -8,37 +8,17 @@
 #include "Explorator.h"
 #include "Tool.h"
 
-void xmlize(IfObject *obj, FILE * file) {
-	/*
-	 printf(".");
-	 char *buf = new char[256];
-	 int nread;
-	 while ((nread = fread(buf, 1, sizeof buf, file)) > 0){
-	 //fwrite(buf, 1, nread, stdout);
-	 printf("%d-%s", nread, buf);
-	 }
-
-	 */
-	//obj->print(file);
-	//fclose(file);
-	fprintf(stdout, "\n======\n");
-
-	std::ofstream stream("output.xml", fstream::app | fstream::out);
-	//stream << "test" << "Nghia";
-
-	if (obj){
-		//cout <<obj->string();
-		obj->printXML(cout);
-		exit(0);
-	}
-	fprintf(stdout, "\n======\n");
-	fflush(stdout);
-}
-
-char* getState(IfInstance *s) {
-	printf("State");
-	return "s";
-}
+#include <xercesc/util/PlatformUtils.hpp>
+#include <xercesc/util/XMLString.hpp>
+#include <xercesc/dom/DOM.hpp>
+#include <xercesc/util/OutOfMemoryException.hpp>
+#include <xercesc/framework/XMLFormatter.hpp>
+#include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/dom/DOMDocument.hpp>
+#include <xercesc/dom/DOMImplementation.hpp>
+#include <xercesc/dom/DOMImplementationRegistry.hpp>
+#include <xercesc/dom/DOMLSSerializer.hpp>
+#include <xercesc/dom/DOMLSOutput.hpp>
 
 namespace tsp {
 
@@ -560,7 +540,8 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 					hit = false;
 			}
 
-			if (hit && purposes[k].numVariables > 0) {
+			if (hit && purposes[k].numVariables > 0)
+			{
 				tmpDepth = checkVariable(false, sourceStateInstance, k, depth);
 				if (tmpDepth == -1)
 					hit = false;
@@ -672,7 +653,6 @@ bool Explorator::checkParameter(IfLabel* label, char* signal_name,
 	char *c2;
 
 	getParameterValue(label, signal_name, signal_type_name, signalParameter);
-
 	if (signalParameter != NULL) {
 		if (strcmp(signal_parameter, signalParameter) == 0) {
 			return true;
@@ -725,38 +705,32 @@ bool Explorator::checkParameter(IfLabel* label, char* signal_name,
 
 void Explorator::getParameterValue(IfLabel* label, char* signal_name,
 		char* signal_type_name, char parameter[PARAMETER]) {
-	FILE *f1, *f2;
-	char par[PARAMETER];
 
-	f1 = fopen("message.xml", "a");
-	if (f1 == NULL) {
-		cerr << "cannot open message.xml !" << endl;
-	} else {
-		//nghia
-		//label->xmlize(f1);
-		printf("NGHIA");
-		fclose(f1);
+	int n = label->getLength();
+	IfEvent *ev;
+	string param = "";
+	for (int i=0; i<n; i++){
+		ev = label->getAt(i);
+		if (ev->getKind() == getTypeSignal(signal_type_name)){
+			string str = ev->getValue();	//Submit{p1=3,p2=7}
+			//extract parameters "{p1=3,p2=7}" to "{3,7}"
+			vector<string> vs = tsp::Tool::split(str, '{');
+			if (vs.at(0).compare(string(signal_name)) != 0)
+				continue;
+
+			str = vs.at(1); //p1=3,p2=7}
+			str = tsp::Tool::split(str, '}').at(0);	//p1=3,p2=7
+			vs = tsp::Tool::split(str, ',');
+			for (string s : vs){
+				if (param.size() == 0)
+					param = tsp::Tool::split(str, '=').at(1);
+				else
+					param = param + string(",") + tsp::Tool::split(str, '=').at(1);
+			}
+		}
 	}
-	char commande[200];
-	sprintf(commande, "$TestGenIF/lib/get-parameter.sh %s %s", signal_name,
-			signal_type_name);
-	system(commande);
-
-	f2 = fopen("parameter.value", "r");
-	if (f2 == NULL) {
-		cerr << "cannot open parameter.value !" << endl;
-	} else {
-		fscanf(f2, "%s", par);
-		fclose(f2);
-		if (par != NULL) {
-			unsigned int l1 = strlen(signal_name);
-			unsigned int l2 = strlen(par);
-			char* p = str_sub(par, l1 + 1, l2 - 1);
-			strcpy(parameter, p);
-
-		} else
-			strcpy(parameter, "");
-	}
+	param = string("{") + param + string("}");
+	strcpy(parameter, param.c_str());
 }
 
 /*
@@ -781,6 +755,8 @@ long int Explorator::checkActiveClock(bool order, IfInstance *state, int ind,
 
 	bool hit = true;
 	int clock_id = -2;
+
+cout <<"number of clock " <<numActiveClocks <<endl;
 
 	while (hit && i < numActiveClocks) {
 		if (order) {
@@ -883,6 +859,10 @@ long int Explorator::checkBoundClock(bool order, const IfConfig *state,
 long int Explorator::checkVariable(bool order, IfInstance *state, int ind,
 		long int depth) {
 	long int hitDepth = -1;
+
+	if (state == NULL)
+			return hitDepth;
+
 	int i = 0;
 	int numVariables;
 	bool hit = true;
@@ -1021,12 +1001,14 @@ IfInstance* Explorator::checkProcessInstance(const IfConfig *state,
 				continue;
 
 			string txt = c2->string();
+			//cout <<"----"<<txt <<"----"<<endl;
 			vector<string> el = Tool::split(txt, '\t');
-			for (string procname : el){
+			//for (string procname : el){
+			string procname = el.at(0);
 				if (procname.compare(processInstanceName) == 0){
 					return c2;
 				}
-			}
+			//}
 			i++;
 		}
 		j++;
@@ -1048,17 +1030,15 @@ long int Explorator::checkState(IfInstance *state, char* searchedState,
 	if (searchedState == NULL || state == NULL)
 		return -1;
 
-	string s;
-	cout <<"OK" <<endl;
-	cout <<endl <<searchedState <<endl;
-	cout <<state->string() <<endl;
-	//if (state->i)
-//TODO to complete
-	{
-		//s = getState(state);
-		if (s == searchedState)
-			return depth;
-	}
+	DOMDocument *doc = tsp::Tool::parserXml(tsp::Tool::ifObject2Xml(state));
+	if (doc == NULL)
+		return -1;
+	string s = tsp::Tool::getXmlAttributeValue(doc, "state");
+	//s = top:s0 ==> get s0
+	if (s.find(':') != std::string::npos)
+		s = tsp::Tool::split(s, ':').at(1);
+	if (s.compare(string(searchedState)) == 0)
+		return depth;
 	return -1;
 }
 
@@ -1071,38 +1051,18 @@ long int Explorator::checkState(IfInstance *state, char* searchedState,
 
 void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
 		char value[VALUE]) {
-	char val[VALUE];
-	FILE *f1, *f2;
+	if (state == NULL)
+		return;
 
-	f1 = fopen("output.xml", "a");
-	if (f1 == NULL) {
-		cerr << "cannot open output.xml !" << endl;
-	} else {
-		if (state != NULL) {
-			//if ((state->getState())!= NULL)
-			if ((getState(state)) != NULL) {
-				//nghia
-				//state->xmlize(f1);
-				printf("NGHIA 955");
-				fclose(f1);
-			}
-		}
-		char commande[200];
-		sprintf(commande, "$TestGenIF/lib/get-value.sh %s", searchedVariable);
-		system(commande);
-		f2 = fopen("output.value", "r");
-
-		if (f2 == NULL) {
-			cerr << "cannot open output.value !" << endl;
-		} else {
-			fscanf(f2, "%s", val);
-			fclose(f2);
-			if (val != NULL)
-				strcpy(value, val);
-			else
-				strcpy(value, "");
-		}
-	}
+	DOMDocument *doc = tsp::Tool::parserXml(tsp::Tool::ifObject2Xml(state));
+	if (doc == NULL)
+		return;
+	DOMNodeList* list = doc->getElementsByTagName(XMLString::transcode(searchedVariable));
+	if (list == NULL)
+		return;
+	DOMNode *node = list->item(0);	//<x><integer value="0"/></x>
+	string str = tsp::Tool::getXmlAttributeValue(node, "value");
+	strcpy(value, str.c_str());
 }
 
 /*
@@ -1113,12 +1073,16 @@ void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
  */
 
 void Explorator::getClockId(IfInstance *state, char *searchedClock, int *id) {
+	if (state == NULL)
+		return;
+
 	int d = -1;
 	FILE *f1, *f2;
-
-	if (state != NULL) {
+	state->printXML(cout);
+	 {
 		//if ((state->getState())!= NULL)
-		if ((getState(state)) != NULL) {
+		//if ((getState(state)) != NULL)
+		{
 			f1 = fopen("output.xml", "a");
 			if (f1 == NULL) {
 				cerr << "cannot open output.xml !" << endl;
@@ -1190,8 +1154,6 @@ void Explorator::saveStat(short int i) {
 		printf("\n #### File 'output.label' not open #### \n");
 
 	} else {
-		output_stat << "	Visited states: " << label_id << endl;
-//TODO
 		//output_stat << "	Number of executed Jumps: " << jump_counter << endl;
 
 		if (i == 1)
@@ -1339,14 +1301,6 @@ void Explorator::saveOrdPurposes() {
 	}
 }
 
-void Explorator::print_label(long int label_id, IfLabel* label) {
-	if (!output_label) {
-		printf("\n #### File 'output.label' not open #### \n");
-	} else {
-		output_label << label_id << ":";
-		output_label << label->string() << endl;
-	}
-}
 
 int Time::print(int i, int bound) {
 	if (bound != -1) {

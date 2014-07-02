@@ -43,7 +43,6 @@ public:
 	void saveStat(short int i);
 
 protected:
-	void print_label(long int label_id, IfLabel* label);
 	int getTypeSignal(char* type);
 	void setTestPurposes();
 	long int checkTestPurpose(const IfConfig* source, IfLabel* label,
@@ -74,6 +73,8 @@ protected:
 	int maxDepth;
 	int currentDepth;
 
+	TestCase testCase;
+
 	ofstream output_label;
 	ofstream output_stat;
 	ifstream input_sc;                    //States Format File
@@ -97,7 +98,6 @@ protected:
 	static const unsigned PARAMETER = 300; // the length of parameter value
 
 	int stateNumber;
-	long int label_id;
 
 	/* GLOBAL VARIABLES */
 

@@ -27,7 +27,6 @@ struct StateNode {
   long int pos;
   long int depth;
   long int father;
-  long int label_id;
 } ;
 
 class StateList{
@@ -35,7 +34,7 @@ class StateList{
   StateList();
   ~StateList();
   void clear();
-  void put (IfConfig* s,long int depth, long int father,long int label_id);
+  void put (IfConfig* s,long int depth, long int father);
   void put (StateNode p);
   void update (StateNode p);
   void remove_state(IfConfig* s);
@@ -55,7 +54,6 @@ class StateList{
   long int getSize();
   IfConfig* get();
   bool isEmpty();
-  void print_aldebaran_suite (long int source,long int label_id,long int target);
   
 protected:
   ofstream output_suite;    

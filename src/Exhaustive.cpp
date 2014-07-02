@@ -11,6 +11,7 @@ namespace tsp {
 enum{
 	VISITED, UNVISITED
 };
+
 Exhaustive::Exhaustive(const IfEngine* engine, bool isDfs) :
 		Explorator(engine) {
 	container = new Container(isDfs);
@@ -38,6 +39,7 @@ void Exhaustive::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 }
 
 void Exhaustive::visit(IfConfig* source, IfLabel* label, IfConfig* target) {
+
 	int n = label->getLength();
 	for (int i=0; i<n; i++){
 		Event *ev = Event::parser(label->getAt(i));
@@ -47,6 +49,8 @@ void Exhaustive::visit(IfConfig* source, IfLabel* label, IfConfig* target) {
 	}
 	if (testCase.size() == maxDepth || target == NULL)
 		testCase.print(std::cout);
+
+	checkPurpose(source, label, target, maxDepth);
 }
 
 
@@ -57,7 +61,7 @@ void Exhaustive::visitAll(int depth) {
 	container->push(start);
 
 	while (!container->isEmpty() && currentDepth < depth){
-		std::cout <<"visitAll==="<<endl;
+		//std::cout <<"visitAll==="<<endl;
 		currentDepth ++;
 
 		IfConfig *node = container->pop();
