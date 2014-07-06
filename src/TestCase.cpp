@@ -46,4 +46,11 @@ int TestCase::add(IfLabel *label){
 	}
 	return d;
 }
+map<string,TestCase> TestCase::project() {
+	map<string,TestCase> localTestCase;
+
+	return localTestCase;
+}
+
 } /* namespace tsp */
+

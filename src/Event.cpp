@@ -22,8 +22,10 @@ Event::~Event() {
 Event* Event::parser(IfEvent *ev){
 	unsigned k = ev->getKind();
 	string pid, partner, label;
+	//cout <<k<<ev->string() <<endl ;
 	if (k == IfEvent::INPUT || k == IfEvent::OUTPUT){
 		label = string(ev->getValue());
+
 		string str = ev->string();
 		//e.g., str = <<{client}0 ?Input{p1=1}{client}0>>
 

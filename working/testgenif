@@ -1,0 +1,64 @@
+#!/bin/sh
+while getopts "f:s:d:p:" option;
+do 
+case $option in
+f)
+spec_file="$OPTARG";;
+s)
+strategy="$OPTARG";;
+d)
+maxdepth="$OPTARG";;
+p)
+purposes="$OPTARG";;
+esac
+done
+
+make clean >> /dev/null
+echo
+echo "_________________________________________________________________"
+echo  " TestGen-IF Tool."
+echo "_________________________________________________________________"
+echo ""
+echo "_________________________________________________________________"
+echo "Status: Compiling $spec_file.if file ..."
+
+make "$spec_file.g" >> /dev//null 
+
+echo "_________________________________________________________________"
+echo "Status: Generating test case ..."
+
+touch "./output.sequence"
+
+echo "_________________________________________________________________" >> "output.stat"
+echo  " TestGen-IF Tool Statistics." >> "output.stat"
+echo "_________________________________________________________________" >> "output.stat"
+echo "" >> "output.stat"
+echo "	IF specification: $spec_file.if"  >> "output.stat"
+echo "	Strategy: $strategy" >> "output.stat"
+echo "	Depth limit: $maxdepth" >> "output.stat"
+
+before="$(date +%s)"
+./$spec_file.g -$strategy -d $maxdepth -p $purposes  
+after="$(date +%s)"
+
+#rm -f "./output.label" "./output.suite" "./output.id" "./output.value" "./output.xml" "./message.xml"  "./parameter.value"
+
+#duration of test generation
+elapsed_seconds="$(expr $after - $before)"
+hours="$(expr $elapsed_seconds / 3600)"
+tmp1="$(expr $hours \* 3600)"
+tmp2="$(expr $elapsed_seconds - $tmp1)"
+minutes="$(expr $tmp2 / 60)"
+seconds="$(expr $tmp2 - $minutes \* 60)"
+echo "_________________________________________________________________"
+echo "	Elapsed time for test generation: $hours:$minutes:$seconds"
+echo "_________________________________________________________________"
+echo "	>>> 	output.sequence file for test sequence"
+echo "	>>> 	output.stat file for statistics"
+echo "_________________________________________________________________"
+echo ""
+
+echo "" >> "output.stat"
+echo "	Test case length: $(wc -l ./output.sequence | cut -d" " -f1)" >> "output.stat"
+echo " 	Test generation duration: $hours:$minutes:$seconds" >> "output.stat"
+echo "_________________________________________________________________" >> "output.stat"

@@ -33,7 +33,7 @@ void HitOrJump::visitAll(int depthlim) {
 	while (!m_queue.isEmpty()) {
 		state_node = m_queue.get();
 		if (state_node.state != NULL) {
-			cout << "visitAll" <<endl;
+			cout <<endl<< "visitAll" <<endl;
 			if (state_node.depth > (depthlim - 1 + raiz)) {
 				jump_counter++;
 				printf(
@@ -48,6 +48,7 @@ void HitOrJump::visitAll(int depthlim) {
 				//system(
 				//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 				testCase.print(cout);
+				testCase.clear();
 
 				output_queue.clear();
 				m_queue.clear();
@@ -93,7 +94,7 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 	long int searched_depth = 0;
 	bool exist = false;
 	long int tmpDepth = -1;
-	cout <<"   explorer" <<endl;
+	cout <<".";
 
 	if ((state_node.depth + 1) != hit_position) {
 		if (output_queue.getPos(target) == -1) {
@@ -123,6 +124,8 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			testCase.print(cout);
+			testCase.clear();
+
 			saveStat(1);
 			saveTestPurposes();
 			exit(1);
@@ -143,6 +146,7 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			testCase.print(cout);
+			testCase.clear();
 
 			m_queue.clear();
 			output_queue.clear();

@@ -1,0 +1,8 @@
+digraph server {
+  stop [color=red];
+  q0[shape=doublecircle];
+  q0 -> q1 [label="[eager]\ninput Submit(y); \n/task y := 0;
+output Report(y);
+"];
+}
+

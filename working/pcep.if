@@ -1,0 +1,2338 @@
+/**************************************************************
+ * System PCEP - For Observer                                 * 
+ *                                                            *
+ *        Last modified: 2008.07.02                           *
+ *        by Ik Soon HWANG (Department LOR, IT-Sudparis)      *
+ **************************************************************/
+
+system PCEP;
+
+const SystemId = 0;
+const M = 2;  /* M: The maximum number of PCEP systems */  
+const N = 1;  /* N: The maximum number of child process = (M-1)*2 */
+
+const MaxOfMainIndex = 1;    /* MaxOfMainIndex = M - 1 */
+const MaxOfChildIndex = 1;    /* MaxOfChildIndex = N - 1 */
+
+const PCEPOpenMaxRetry = 1;    /* Default = 1, pp.70 of the IETF draft */
+const PCEPOpenWaitTimer = 2;    /* Default = 60s, IETF Draft pp.68 */
+const PCEPKeepWaitTimer = 2;    /* Default = 60s, IETF Draft pp.68 */
+const PCEPKeepaliveTimerDefault = 2;  /* Recommended = 30s, IETF Draft pp.23 */
+/* For IF-2.0 */
+const PCEPKeepaliveTimerDefault_end = 3;  
+const PCEPDeadTimerDefault = 8;  /* 4*KeepaliveTimer, IETF Draft pp.23 */
+/* For IF-2.0 */
+const PCEPDeadTimerDefault_end = 9;  
+const PCEPKeepaliveTimerMax = 2;  /* Maximum is not specified in IETF Draft */
+const PCEPDeadTimerMax = 8;  /* Maximum is not specified in IETF Draft */
+const TCPConnectMaxRetry = 1;    /* Default = 5, pp.68 of the IETF draft */
+const TCPConnectTimer = 2;    /* Default = 60s, pp.67 of the IETF draft */
+
+const MaxOfErrorObject = 1;   /* The maximum number of error objects in PCEP Error message */
+/* For IF-2.0 */
+const MaxOfErrorObject_end = 2;   
+const PCEPErrorTypeInit = 1;	/* The initial value of PCEPErrorTypeType */
+const PCEPErrorValueInit = 1;	/* The initial value of PCEPErrorValueType */
+
+type PCEPStateInfo = enum 
+  Idle, TCPPending, OpenWait, KeepWait, SessionUP
+endenum;
+
+/* For IF-2.0 */
+type PeerIdType = range 0 .. M;
+type ChannelIdType = range 0 .. N;
+type PCEPKeepaliveTimerType = range PCEPKeepaliveTimerDefault .. PCEPKeepaliveTimerDefault_end;
+type PCEPDeadTimerType = range PCEPDeadTimerDefault .. PCEPDeadTimerDefault_end; 
+/* For IF-2.0 
+type PeerIdType = range 0 .. MaxOfMainIndex;
+type ChannelIdType = range 0 .. MaxOfChildIndex;
+type PCEPKeepaliveTimerType = range PCEPKeepaliveTimerDefault .. PCEPKeepaliveTimerDefault;
+type PCEPDeadTimerType = range PCEPDeadTimerDefault .. PCEPDeadTimerDefault; 
+*/
+/* type PCEPKeepaliveTimerType = range 0 .. PCEPKeepaliveTimerMax;
+type PCEPDeadTimerType = range 0 .. PCEPDeadTimerMax; */
+
+type TCPConnectResultType = enum 
+  ConnectFail, ConnectSuccess 
+endenum;
+
+type PCEPOpenObjectType = record
+  keepaliveTimer PCEPKeepaliveTimerType;
+  deadTimer PCEPDeadTimerType;
+endrecord;
+
+/* For IF-2.0 */
+type PCEPErrorTypeType = range PCEPErrorTypeInit .. 2;
+type PCEPErrorValueType = range PCEPErrorValueInit .. 7;
+/* For IF-2.0 
+type PCEPErrorTypeType = range PCEPErrorTypeInit .. 1;
+type PCEPErrorValueType = range PCEPErrorValueInit .. 6;
+*/
+
+type PCEPErrorObjectType = record
+  errorType PCEPErrorTypeType;
+  errorValue PCEPErrorValueType;
+endrecord;
+
+type PCEPErrorObjectListType = array [MaxOfErrorObject] of PCEPErrorObjectType;
+
+/* For IF-2.0 */
+type PCEPErrorObjectIndexType = range 1 .. MaxOfErrorObject_end;
+/* For IF-2.0 
+type PCEPErrorObjectIndexType = range 1 .. MaxOfErrorObject;
+*/
+
+type PCEPOpenParameterType = record
+  pcepOpenObject PCEPOpenObjectType;
+endrecord; 
+
+type PCEPPCReqParameterType = record
+  rpObjectExist boolean;
+  endPointObjectExist boolean;
+endrecord; 
+
+type PCEPPCRepParameterType = record
+  rpObjectExist boolean;
+endrecord; 
+
+type PCEPErrorParameterType = record
+  numberOfErrorObject PCEPErrorObjectIndexType;
+  errorObjectList PCEPErrorObjectListType;
+endrecord; 
+
+type ChildInfoMemberType = record
+  childPid_exist boolean;
+  childPid pid;
+  peerId PeerIdType;
+  channelId ChannelIdType;
+  previousState PCEPStateInfo;
+  currentState PCEPStateInfo;
+  initFromApp boolean;
+endrecord;
+
+type ChildInfoTableType = array [N] of ChildInfoMemberType;
+
+signal PCEP_Open_init_req(PeerIdType);
+signal PCEP_Open_req(PCEPOpenParameterType);
+signal PCEP_Open_ind(PCEPOpenParameterType);
+signal PCEP_Keepalive_req();
+signal PCEP_Keepalive_ind();
+signal PCEP_PCReq_req();
+signal PCEP_PCReq_ind();
+signal PCEP_PCRep_req();
+signal PCEP_PCRep_ind();
+signal PCEP_Noti_req();
+signal PCEP_Noti_ind();
+signal PCEP_Error_req(PCEPErrorParameterType);
+signal PCEP_Error_ind(PCEPErrorParameterType);
+signal PCEP_Close_req();
+signal PCEP_Close_ind();
+
+signal TCP_Open_req(PeerIdType);
+signal TCP_Open_ind(PeerIdType, TCPConnectResultType);
+signal TCP_Open_resp(TCPConnectResultType);
+signal TCP_Open_cfm(TCPConnectResultType);
+signal TCP_Data_PCEP_Open_req(PCEPOpenParameterType);
+signal TCP_Data_PCEP_Open_ind(boolean, PCEPOpenParameterType);
+signal TCP_Data_PCEP_Keepalive_req();
+signal TCP_Data_PCEP_Keepalive_ind(boolean);
+signal TCP_Data_PCEP_PCReq_req();
+signal TCP_Data_PCEP_PCReq_ind(boolean, PCEPPCReqParameterType);
+signal TCP_Data_PCEP_PCRep_req();
+signal TCP_Data_PCEP_PCRep_ind(boolean, PCEPPCRepParameterType);
+signal TCP_Data_PCEP_Noti_req();
+signal TCP_Data_PCEP_Noti_ind(boolean);
+signal TCP_Data_PCEP_Error_req(PCEPErrorParameterType);
+signal TCP_Data_PCEP_Error_ind(boolean, PCEPErrorParameterType);
+signal TCP_Data_PCEP_Close_req();
+signal TCP_Data_PCEP_Close_ind();
+signal TCP_Data_PCEP_Unknown_ind();
+signal TCP_Close_req();
+signal TCP_Close_ind();
+signal TCP_Abort_req();
+signal TCP_Abort_ind();
+signal TCP_Status_ind();
+signal TCP_connection_fail_ind();
+
+signal done(pid);
+
+signalroute env_to_PCEPMain(1) 
+  from env to PCEPMain 
+  with PCEP_Open_init_req, TCP_Open_ind;
+
+signalroute PCEPMain_to_env(1)
+  from PCEPMain to env
+  with TCP_Open_resp;
+
+signalroute env_to_PCEPChild(1) 
+  from env to PCEPChild
+  with PCEP_Open_req, PCEP_Keepalive_req, PCEP_PCReq_req, PCEP_PCRep_req, PCEP_Noti_req, PCEP_Error_req, PCEP_Close_req, TCP_Open_cfm, TCP_Data_PCEP_Open_ind, TCP_Data_PCEP_Keepalive_ind, TCP_Data_PCEP_PCReq_ind, TCP_Data_PCEP_PCRep_ind, TCP_Data_PCEP_Noti_ind, TCP_Data_PCEP_Error_ind, TCP_Data_PCEP_Close_ind, TCP_Data_PCEP_Unknown_ind, TCP_Close_ind, TCP_Abort_ind, TCP_Status_ind, TCP_connection_fail_ind;
+
+signalroute PCEPChild_to_env(1)
+  from PCEPChild to env
+  with PCEP_Open_ind, PCEP_Keepalive_ind, PCEP_PCReq_ind, PCEP_PCRep_ind, PCEP_Noti_ind, PCEP_Error_ind, PCEP_Close_ind, TCP_Open_req, TCP_Data_PCEP_Open_req, TCP_Data_PCEP_Keepalive_req, TCP_Data_PCEP_PCReq_req, TCP_Data_PCEP_PCRep_req, TCP_Data_PCEP_Noti_req, TCP_Data_PCEP_Error_req, TCP_Data_PCEP_Close_req, TCP_Close_req, TCP_Abort_req;
+
+/*
+signalroute PCEPChild_to_PCEPMain(1) #urgent
+  from PCEPChild to PCEPMain
+  with done;
+*/
+
+/**********************************************************
+ * Process PCEPMain 
+ **********************************************************/
+
+process PCEPMain(1);
+
+var numOfChild integer public;
+var childInfoTable ChildInfoTableType public;
+var index integer;
+/* var x pid; */
+var peerId PeerIdType;
+var tcpConnectResult TCPConnectResultType;
+
+procedure Init_ChildInfoTable;
+  fpar in childInfoTable ChildInfoTableType;
+  returns integer;
+{#
+  int j;
+  for (j=0; j<if_N_constant; j++)
+  {
+    childInfoTable[j].childPid_exist = 0;
+    childInfoTable[j].childPid = 0;
+    childInfoTable[j].peerId = 0;
+    childInfoTable[j].channelId = 0;
+    childInfoTable[j].previousState = if_Idle_constant;
+    childInfoTable[j].currentState = if_Idle_constant;
+    childInfoTable[j].initFromApp = 0;
+  }
+
+  return 1;
+#}
+endprocedure;
+  
+procedure Find_Available_ChildInfoTable;
+  fpar in childInfoTable ChildInfoTableType, in peerId PeerIdType, in initFromApp boolean;
+  returns integer;
+{#
+  int j;
+
+  for (j=0; j<if_N_constant; j++)
+    if ((childInfoTable[j].childPid_exist != 0) && (childInfoTable[j].peerId == peerId) && (childInfoTable[j].initFromApp == initFromApp))
+        return if_N_constant;	/* Duplicated session initiation from the same peer */
+    
+  for (j=0; j<if_N_constant; j++)
+    if (childInfoTable[j].childPid_exist == 0)
+      return j;
+
+  return j;    /* ChildInfoTable is full */
+#}
+endprocedure;
+
+procedure Clear_ChildInfoTable;
+  fpar in childInfoTable ChildInfoTableType, in x pid;
+  returns integer;
+{#
+  int j;
+  
+  for (j=0; j<if_N_constant; j++)
+    if (childInfoTable[j].childPid == x)
+    {
+      childInfoTable[j].childPid_exist = 0;
+      childInfoTable[j].childPid = 0;
+      childInfoTable[j].peerId = 0;
+      childInfoTable[j].channelId = 0;
+      childInfoTable[j].previousState = if_Idle_constant;
+      childInfoTable[j].currentState = if_Idle_constant;
+      childInfoTable[j].initFromApp = 0;
+    }
+
+  return 1;
+#}
+endprocedure;
+
+/**********************
+ *  State start       * 
+ **********************/
+state start #start ;
+  call Init_ChildInfoTable (childInfoTable);
+  task numOfChild := 0;
+    nextstate Idle;
+endstate;
+
+/**********************
+ *  State Idle        * 
+ **********************/
+state Idle;
+  deadline lazy;
+  provided (numOfChild < N);
+  input PCEP_Open_init_req(peerId);
+    nextstate Idle_PCEP_Open_init_req_decision;
+
+  deadline lazy;
+  provided (numOfChild < N);
+  input TCP_Open_ind(peerId, tcpConnectResult);
+    nextstate Idle_TCP_Open_ind_decision;
+
+/*
+  deadline eager;
+  input done(x);
+    call Clear_ChildInfoTable (childInfoTable, x);
+    task numOfChild := (numOfChild - 1);
+    task x := nil;	
+      nextstate Idle;
+*/
+endstate;
+
+state Idle_PCEP_Open_init_req_decision #unstable ;
+  provided (SystemId <> peerId);
+    index := call Find_Available_ChildInfoTable (childInfoTable, peerId, true);
+    if ((index >= 0) and (index < N)) then
+      childInfoTable[index].childPid := fork PCEPChild(self, peerId, index, true);
+      task childInfoTable[index].childPid_exist := true;
+      task childInfoTable[index].peerId := peerId;
+      task childInfoTable[index].channelId := index;
+      task childInfoTable[index].initFromApp := true;
+      task numOfChild := (numOfChild + 1);
+    endif
+    /* re-initialize internal variables */
+    task index := 0;	
+    task peerId := 0;
+      nextstate Idle;
+
+  provided (SystemId = peerId);
+    /* re-initialize internal variables */
+    task peerId := 0;
+    nextstate Idle;
+endstate;
+
+state Idle_TCP_Open_ind_decision #unstable ;
+  provided (SystemId <> peerId) and (tcpConnectResult = ConnectSuccess);
+    index := call Find_Available_ChildInfoTable (childInfoTable, peerId, false);
+    if ((index >= 0) and (index < N)) then
+      childInfoTable[index].childPid := fork PCEPChild(self, peerId, index, false);
+      task childInfoTable[index].childPid_exist := true;
+      task childInfoTable[index].peerId := peerId;
+      task childInfoTable[index].channelId := index;
+      task childInfoTable[index].initFromApp := false;
+      task numOfChild := (numOfChild + 1);
+      output TCP_Open_resp(tcpConnectResult);
+    endif
+    /* re-initialize internal variables */
+    task index := 0;	
+    task peerId := 0;
+    task tcpConnectResult := ConnectFail;
+      nextstate Idle;
+
+  provided (SystemId <> peerId) and (tcpConnectResult = ConnectFail);
+    output TCP_Open_resp(tcpConnectResult);
+    /* re-initialize internal variables */
+    task peerId := 0;
+    task tcpConnectResult := ConnectFail;
+      nextstate Idle;
+
+  provided (SystemId = peerId);
+    task tcpConnectResult := ConnectFail;
+    output TCP_Open_resp(tcpConnectResult);
+    /* re-initialize internal variables */
+    task peerId := 0;
+      nextstate Idle;
+endstate;
+endprocess;
+
+/**********************************************************
+ * Process PCEPChild 
+ **********************************************************/
+
+process PCEPChild(0);
+ fpar in parent pid, in peerId PeerIdType, in channelId ChannelIdType, in initFromApp boolean;
+
+var tcpConnectTimer clock public; 
+var pcepOpenWaitTimer clock public; 
+var pcepKeepWaitTimer clock public; 
+var pcepKeepaliveTimer clock public; 
+var pcepDeadTimer clock public; 
+var internalOpenWaitTimer clock public; 	/* Timer for internal use */
+var internalKeepWaitTimer clock public; 	/* Timer for internal use */
+
+var pcepKeepaliveTimerValue PCEPKeepaliveTimerType;
+var pcepDeadTimerValue PCEPDeadTimerType;
+
+var tcpConnectRetry integer public;
+var pcepOpenRetry integer public;
+var localOK boolean public;
+var remoteOK boolean public;
+
+var collisionCheckPassed boolean;
+var tcpConnectResult TCPConnectResultType;
+var errorInPCEPMessage boolean;
+var pcepOpenParameter PCEPOpenParameterType;
+var pcepPCReqParameter PCEPPCReqParameterType;
+var pcepPCRepParameter PCEPPCRepParameterType;
+var pcepErrorParameter PCEPErrorParameterType;
+var numberOfErrorObject PCEPErrorObjectIndexType;
+var pcepErrorType PCEPErrorTypeType;
+var pcepErrorValue PCEPErrorValueType;
+
+procedure Check_Collision;
+  fpar in childInfoTable ChildInfoTableType, in systemId PeerIdType, in channelId ChannelIdType;
+  returns boolean;
+{#
+  int peerId, j;
+
+  peerId = childInfoTable[channelId].peerId;
+
+  for (j=0; j<if_N_constant; j++)
+  {
+    if (j != channelId)
+    { 
+      if ((childInfoTable[j].childPid_exist != 0) && (childInfoTable[j].peerId == peerId) && ((childInfoTable[j].currentState == if_OpenWait_constant) || (childInfoTable[j].currentState == if_KeepWait_constant)))
+      {
+        if ((childInfoTable[channelId].initFromApp == 1) && (systemId < peerId))
+          return 0;	/* The system initiated the current session and it has a lower IP address */
+        else if ((childInfoTable[channelId].initFromApp == 0) && (systemId > peerId))
+          return 0;	/* The peer initiated the current session and the system has a higer IP address */
+      }
+    }
+  }
+
+  return 1;    
+#}
+endprocedure;
+
+procedure Init_pcepErrorParameter;
+  fpar inout pcepErrorParameter PCEPErrorParameterType;
+{#
+  int j;
+
+  pcepErrorParameter.numberOfErrorObject = 1;
+
+  for (j=0; j<if_MaxOfErrorObject_constant; j++)
+  {
+    pcepErrorParameter.errorObjectList[j].errorType = if_PCEPErrorTypeInit_constant;
+    pcepErrorParameter.errorObjectList[j].errorValue = if_PCEPErrorValueInit_constant;
+  }
+  j=0;
+#}
+endprocedure;
+
+/***********************
+ *  State Idle         * 
+ ***********************/
+state init #start ;
+  provided true;
+    task tcpConnectRetry := 0;
+    task pcepOpenRetry := 0;
+    task localOK := false;
+    task remoteOK := false;
+    task collisionCheckPassed := false;
+    task tcpConnectResult := ConnectFail;
+    task errorInPCEPMessage := false;
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+    task pcepPCReqParameter.rpObjectExist := false;
+    task pcepPCReqParameter.endPointObjectExist := false;
+    task pcepPCRepParameter.rpObjectExist := false;
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := PCEPErrorTypeInit;
+      task pcepErrorParameter.errorObjectList[0].errorValue := PCEPErrorValueInit;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+
+    task numberOfErrorObject := 1;
+    task pcepErrorType := PCEPErrorTypeInit;
+    task pcepErrorValue := PCEPErrorValueInit;
+    task pcepKeepaliveTimerValue := PCEPKeepaliveTimerDefault;
+    task pcepDeadTimerValue :=PCEPDeadTimerDefault;
+      nextstate idle;
+endstate;
+
+state idle;
+  provided (initFromApp = true);
+    set tcpConnectTimer := 0;
+    informal "--set tcpConnectTimer";
+    output TCP_Open_req(peerId);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := TCPPending;
+    nextstate TCPPending;
+
+  provided (initFromApp = false);
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;   /* For simplicity */
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;	/* For simplicity */
+    task pcepKeepaliveTimerValue := pcepOpenParameter.pcepOpenObject.keepaliveTimer;
+    set pcepOpenWaitTimer := 0;
+    informal "--set pcepOpenWaitTimer";
+    output TCP_Data_PCEP_Open_req(pcepOpenParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := OpenWait;
+    /* re-initialize internal variables */
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+    nextstate OpenWait;
+endstate;
+
+/***********************
+ *  State TCPPending   * 
+ ***********************/
+state TCPPending;
+  deadline lazy;
+  when tcpConnectTimer < TCPConnectTimer;
+  input TCP_Open_cfm(tcpConnectResult);
+    nextstate TCPPending_TCP_Open_cfm_decision;
+
+  deadline eager;
+  provided (tcpConnectRetry < TCPConnectMaxRetry);
+  when tcpConnectTimer = TCPConnectTimer;
+    task tcpConnectRetry := tcpConnectRetry + 1;
+    set tcpConnectTimer := 0;
+    informal "--set tcpConnectTimer";
+    output TCP_Open_req(peerId);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate TCPPending;
+
+  deadline eager;
+  provided (tcpConnectRetry = TCPConnectMaxRetry);
+  when tcpConnectTimer = TCPConnectTimer;
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+endstate;
+
+state TCPPending_TCP_Open_cfm_decision #unstable ;
+  provided (tcpConnectResult = ConnectSuccess);
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;	/* For simplicity */
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;	/* For simplicity */
+    task pcepKeepaliveTimerValue := pcepOpenParameter.pcepOpenObject.keepaliveTimer;
+    reset tcpConnectTimer;
+    informal "--reset tcpConnectTimer";
+    set pcepOpenWaitTimer := 0;
+    informal "--set pcepOpenWaitTimer";
+    output TCP_Data_PCEP_Open_req(pcepOpenParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := OpenWait;
+    /* re-initialize internal variables */
+/*    task tcpConnectRetry := 0;*/
+    task tcpConnectResult := ConnectFail;
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+    nextstate OpenWait;
+
+  provided (tcpConnectResult = ConnectFail) and (tcpConnectRetry < TCPConnectMaxRetry);
+    task tcpConnectRetry := tcpConnectRetry + 1;
+    set tcpConnectTimer := 0;
+    informal "--set tcpConnectTimer";
+    output TCP_Open_req(peerId);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    nextstate TCPPending;
+
+  provided (tcpConnectResult = ConnectFail) and (tcpConnectRetry = TCPConnectMaxRetry);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+endstate;
+
+/***********************
+ *  State OpenWait     * 
+ ***********************/
+state OpenWait;
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_Open_req(pcepOpenParameter); 	/* According to Spec.*/
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Open_req(pcepOpenParameter); 	/* According to Spec.*/
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_Keepalive_req();		/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (localOK = false);
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Keepalive_req();
+    task remoteOK := true;
+    set pcepKeepWaitTimer := 0;
+    informal "--set pcepKeepWaitTimer";
+/* 
+ * According to spec it should exist but I think NO!
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+*/
+    reset internalKeepWaitTimer;
+    informal "--reset internalKeepWaitTimer";
+    output TCP_Data_PCEP_Keepalive_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := KeepWait;
+      nextstate KeepWait;
+
+  deadline lazy;
+  provided (localOK = true);
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Keepalive_req();
+    task remoteOK := true;
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+    reset internalKeepWaitTimer;
+    informal "--reset internalKeepWaitTimer";
+    output TCP_Data_PCEP_Keepalive_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := SessionUP;
+    /* re-initialize internal variables */
+    /* task pcepOpenRetry := 0;*/
+      nextstate SessionUP;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_PCReq_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_PCReq_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_PCRep_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_PCRep_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_Noti_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Noti_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_Error_req(pcepErrorParameter); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Error_req(pcepErrorParameter);
+    reset internalKeepWaitTimer;
+    informal "--reset internalKeepWaitTimer";
+    task numberOfErrorObject := pcepErrorParameter.numberOfErrorObject; 
+    task pcepErrorType := pcepErrorParameter.errorObjectList[0].errorType;
+    task pcepErrorValue := pcepErrorParameter.errorObjectList[0].errorValue;
+      nextstate OpenWait_PCEP_Error_req_decision;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input PCEP_Close_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Close_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Open_ind (errorInPCEPMessage, pcepOpenParameter);
+    nextstate OpenWait_TCP_Data_PCEP_Open_ind_decision;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Open_ind (errorInPCEPMessage, pcepOpenParameter);	/* Duplicated Open from peer. Seems to be peer error */
+    informal "--Duplicated PCEP Open from its peer";
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_Keepalive_ind(errorInPCEPMessage); 	/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Keepalive_ind(errorInPCEPMessage); 	/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_PCReq_ind(errorInPCEPMessage, pcepPCReqParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_PCReq_ind(errorInPCEPMessage, pcepPCReqParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_PCRep_ind(errorInPCEPMessage, pcepPCRepParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_PCRep_ind(errorInPCEPMessage, pcepPCRepParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_Noti_ind(errorInPCEPMessage); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Noti_ind(errorInPCEPMessage); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_Error_ind(errorInPCEPMessage, pcepErrorParameter); 	/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Error_ind(errorInPCEPMessage, pcepErrorParameter); 	/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+/* 
+ * According to Spec. - to be proposed? 
+ *
+  deadline lazy;
+  input TCP_Data_PCEP_Error_ind (errorInPCEPMessage, pcepErrorParameter);
+    task numberOfErrorObject := pcepErrorParameter.numberOfErrorObject; 
+    task pcepErrorType := pcepErrorParameter.errorObjectList[0].errorType;
+    task pcepErrorValue := pcepErrorParameter.errorObjectList[0].errorValue;
+      nextstate OpenWait_TCP_Data_PCEP_Error_ind_decision;
+*/
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_Close_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Close_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Data_PCEP_Unknown_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Unknown_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepOpenWaitTimer < PCEPOpenWaitTimer; 	
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline eager;
+  when pcepOpenWaitTimer = PCEPOpenWaitTimer;
+    reset pcepOpenWaitTimer;
+    informal "--reset pcepOpenWaitTimer";
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 2;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline eager;
+  when internalKeepWaitTimer = PCEPKeepWaitTimer; 	/* In case when PCEP Open is sent to application and no Keepalive is received */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;
+
+state OpenWait_TCP_Data_PCEP_Open_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false);
+    collisionCheckPassed := call Check_Collision (({PCEPMain}0).childInfoTable, SystemId, channelId); 
+      nextstate OpenWait_TCP_Data_PCEP_Open_ind_collision_decision;
+endstate;
+
+state OpenWait_TCP_Data_PCEP_Open_ind_collision_decision #unstable ;
+  provided (collisionCheckPassed = true);
+    informal "--collisionCheckPassed";
+    task pcepDeadTimerValue := pcepOpenParameter.pcepOpenObject.deadTimer;
+    reset pcepOpenWaitTimer;
+    informal "--reset pcepOpenWaitTimer";
+    set internalKeepWaitTimer := 0;
+    informal "--set internalKeepWaitTimer";
+    output PCEP_Open_ind(pcepOpenParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task collisionCheckPassed := false;
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+      nextstate OpenWait;
+
+  provided (collisionCheckPassed = false);
+    informal "--collisionCheckFailed";
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;    
+
+state OpenWait_PCEP_Error_req_decision #unstable ;
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 3) and (pcepOpenRetry < PCEPOpenMaxRetry);
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 3) and (pcepOpenRetry = PCEPOpenMaxRetry);  /* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4) and (pcepOpenRetry < PCEPOpenMaxRetry) and (localOK = true);
+    task pcepOpenRetry := pcepOpenRetry + 1;
+    set pcepOpenWaitTimer := 0;
+    informal "--set pcepOpenWaitTimer";
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+    task numberOfErrorObject := 1;
+    task pcepErrorType := PCEPErrorTypeInit;
+    task pcepErrorValue := PCEPErrorValueInit;
+      nextstate OpenWait;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4) and (pcepOpenRetry < PCEPOpenMaxRetry) and (localOK = false);
+    task pcepOpenRetry := pcepOpenRetry + 1;
+    set pcepKeepWaitTimer := 0;
+    informal "--set pcepKeepWaitTimer";
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := KeepWait;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+    task numberOfErrorObject := 1;
+    task pcepErrorType := PCEPErrorTypeInit;
+    task pcepErrorValue := PCEPErrorValueInit;
+      nextstate KeepWait;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4) and (pcepOpenRetry = PCEPOpenMaxRetry);  /* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 5) and (pcepOpenRetry = PCEPOpenMaxRetry); 
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 5) and (pcepOpenRetry < PCEPOpenMaxRetry);   /* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (not ((numberOfErrorObject = 1) and (pcepErrorType = 1)));	/* Internal Error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (numberOfErrorObject = 1) and (pcepErrorType = 1) and ((pcepErrorValue = 1) or (pcepErrorValue = 2) or (pcepErrorValue = 6) or (pcepErrorValue = 7));	/* Internal Error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;
+
+/* 
+ * According to Spec.
+ *
+state OpenWait_TCP_Data_PCEP_Error_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false) and (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4);
+    output PCEP_Error_ind(pcepErrorParameter);   
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    ** re-initialize internal variables **
+    call Init_pcepErrorParameter (pcepErrorParameter);
+**
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+**
+    task numberOfErrorObject := 1;
+    task pcepErrorType := PCEPErrorTypeInit;
+    task pcepErrorValue := PCEPErrorValueInit;
+      nextstate OpenWait;
+
+  provided (errorInPCEPMessage = false) and (not ((numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4)));
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Close_req();
+    ** re-initialize internal variables **
+    call Init_pcepErrorParameter (pcepErrorParameter);
+**
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+**
+      nextstate ClearResources;
+endstate;
+*/
+
+/**********************
+ *  State KeepWait    * 
+ **********************/
+state KeepWait ; 
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input PCEP_Open_req(pcepOpenParameter);	/* According to Spec. - Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (remoteOK = true);
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Open_req(pcepOpenParameter);
+    task pcepKeepaliveTimerValue := pcepOpenParameter.pcepOpenObject.keepaliveTimer;
+    set pcepKeepWaitTimer := 0;
+    informal "--set pcepKeepWaitTimer";
+    reset internalOpenWaitTimer;
+    informal "--reset internalOpenWaitTimer";
+    output TCP_Data_PCEP_Open_req(pcepOpenParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+      nextstate KeepWait;
+
+  deadline lazy;
+  provided (remoteOK = false);
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Open_req(pcepOpenParameter);
+    task pcepKeepaliveTimerValue := pcepOpenParameter.pcepOpenObject.keepaliveTimer;
+    set pcepOpenWaitTimer := 0;	    /* Why??? */
+    informal "--set pcepOpenWaitTimer";
+    reset internalOpenWaitTimer;
+    informal "--reset internalOpenWaitTimer";
+    output TCP_Data_PCEP_Open_req(pcepOpenParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := OpenWait;
+    /* re-initialize internal variables */
+    task pcepOpenParameter.pcepOpenObject.keepaliveTimer := PCEPKeepaliveTimerDefault;
+    task pcepOpenParameter.pcepOpenObject.deadTimer := PCEPDeadTimerDefault;
+      nextstate OpenWait;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input PCEP_Keepalive_req();	/* According to Spec. - Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Keepalive_req();	/* According to Spec. - Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_PCReq_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_PCReq_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_PCRep_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_PCRep_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Noti_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Noti_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Error_req(pcepErrorParameter);	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Error_req(pcepErrorParameter);	/* Other values than TV=1,6 without pcepOpenObject is internal error - To be checked */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input PCEP_Close_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input PCEP_Close_req(); 	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Open_ind(errorInPCEPMessage, pcepOpenParameter); 		/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Open_ind(errorInPCEPMessage, pcepOpenParameter); 		/* According to Spec. - Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input TCP_Data_PCEP_Keepalive_ind (errorInPCEPMessage);
+    nextstate KeepWait_TCP_Data_PCEP_Keepalive_ind_decision;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Keepalive_ind (errorInPCEPMessage);	/* Duplicated Keepalive from peer. Seems to be peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input TCP_Data_PCEP_PCReq_ind(errorInPCEPMessage, pcepPCReqParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_PCReq_ind(errorInPCEPMessage, pcepPCReqParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_PCRep_ind(errorInPCEPMessage, pcepPCRepParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_PCRep_ind(errorInPCEPMessage, pcepPCRepParameter); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Noti_ind(errorInPCEPMessage); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Noti_ind(errorInPCEPMessage); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input TCP_Data_PCEP_Error_ind (errorInPCEPMessage, pcepErrorParameter);
+    task numberOfErrorObject := pcepErrorParameter.numberOfErrorObject; 
+    task pcepErrorType := pcepErrorParameter.errorObjectList[0].errorType;
+    task pcepErrorValue := pcepErrorParameter.errorObjectList[0].errorValue;
+      nextstate KeepWait_TCP_Data_PCEP_Error_ind_decision;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Error_ind (errorInPCEPMessage, pcepErrorParameter);   /* Peer error - To be checked */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Data_PCEP_Close_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Close_ind(); 	/* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer;
+  input TCP_Data_PCEP_Unknown_ind();
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Data_PCEP_Unknown_ind();
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepWaitTimer < PCEPKeepWaitTimer; 	
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when internalOpenWaitTimer < PCEPOpenWaitTimer;
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline eager;
+  when pcepKeepWaitTimer = PCEPKeepWaitTimer;
+    reset pcepKeepWaitTimer;
+    informal "--reset pcepKeepWaitTimer";
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 7;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline eager;
+  when internalOpenWaitTimer = PCEPOpenWaitTimer;	/* In case when PCEP Error is sent to application and no Open is received */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;
+
+state KeepWait_TCP_Data_PCEP_Keepalive_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false) and (remoteOK = true);
+    task localOK := true;
+    reset pcepKeepWaitTimer;
+    informal "--reset pcepKeepWaitTimer";
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+    output PCEP_Keepalive_ind();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := SessionUP;
+    /* re-initialize internal variables */
+    /* task pcepOpenRetry := 0;*/
+      nextstate SessionUP;
+
+  provided (errorInPCEPMessage = false) and (remoteOK = false);
+    task localOK := true;
+    reset pcepKeepWaitTimer;
+    informal "--reset pcepKeepWaitTimer";
+    set pcepOpenWaitTimer := 0;   /* Why??? */
+    informal "--set pcepOpenWaitTimer";
+/* To be checked later
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+*/
+    output PCEP_Keepalive_ind();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := OpenWait;
+      nextstate OpenWait;
+endstate;
+
+state KeepWait_TCP_Data_PCEP_Error_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false) and (numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4);
+    reset pcepKeepWaitTimer;
+    informal "--reset pcepKeepWaitTimer";
+    set internalOpenWaitTimer := 0;
+    informal "--set internalOpenWaitTimer";
+    output PCEP_Error_ind(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+    task numberOfErrorObject := 1;
+    task pcepErrorType := PCEPErrorTypeInit;
+    task pcepErrorValue := PCEPErrorValueInit;
+      nextstate KeepWait;
+
+  provided (errorInPCEPMessage = false) and (not ((numberOfErrorObject = 1) and (pcepErrorType = 1) and (pcepErrorValue = 4)));
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;
+
+/**********************
+ *  State SessionUP   * 
+ **********************/
+state SessionUP ;
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_Open_req(pcepOpenParameter);	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_Open_req(pcepOpenParameter);	/* Internal error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_Keepalive_req();		/* Internal error - By assumption */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_Keepalive_req();		/* Internal error - By assumption */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_PCReq_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_PCReq_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_PCReq_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_PCReq_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_PCRep_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_PCRep_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_PCRep_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_PCRep_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_Noti_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_Noti_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_Noti_req();
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_Noti_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_Error_req(pcepErrorParameter);	/* Do not check values by assumption */
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_Error_req(pcepErrorParameter);	/* Do not check values by assumption */
+    if (pcepKeepaliveTimerValue <> 0) then
+      set pcepKeepaliveTimer := 0;
+      informal "--set pcepKeepaliveTimer";
+    endif
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input PCEP_Close_req();
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input PCEP_Close_req();
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Open_ind (errorInPCEPMessage, pcepOpenParameter);   /* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Open_ind (errorInPCEPMessage, pcepOpenParameter);   /* Peer error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Keepalive_ind (errorInPCEPMessage);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Keepalive_ind_decision;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Keepalive_ind (errorInPCEPMessage);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Keepalive_ind_decision;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_PCReq_ind (errorInPCEPMessage, pcepPCReqParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_PCReq_ind_decision;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_PCReq_ind (errorInPCEPMessage, pcepPCReqParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_PCReq_ind_decision;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_PCRep_ind (errorInPCEPMessage, pcepPCRepParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_PCRep_ind_decision;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_PCRep_ind (errorInPCEPMessage, pcepPCRepParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_PCRep_ind_decision;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Noti_ind (errorInPCEPMessage);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Noti_ind_decision;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Noti_ind (errorInPCEPMessage);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Noti_ind_decision;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Error_ind (errorInPCEPMessage, pcepErrorParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Error_ind_decision;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Error_ind (errorInPCEPMessage, pcepErrorParameter);
+    if (pcepDeadTimerValue <> 0) then
+      set pcepDeadTimer := 0;
+      informal "--set pcepDeadTimer";
+    endif
+      nextstate SessionUP_TCP_Data_PCEP_Error_ind_decision;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Close_ind();
+    output PCEP_Close_ind();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Close_ind();
+    output PCEP_Close_ind();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Data_PCEP_Unknown_ind();
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 3;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 2;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Data_PCEP_Unknown_ind();
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 3;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 2;
+    output PCEP_Error_ind(pcepErrorParameter);
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Close_ind(); 	/* Close request from peer */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_Abort_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+      nextstate ClearResources;
+
+  deadline lazy;
+  when pcepKeepaliveTimer < pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline lazy;
+  provided (not active(pcepKeepaliveTimer)) and (not active(pcepDeadTimer));
+  input TCP_connection_fail_ind(); 	/* Network error */
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary value */
+    output TCP_Abort_req();
+      nextstate ClearResources;
+
+  deadline eager;
+  when pcepKeepaliveTimer = pcepKeepaliveTimerValue and pcepDeadTimer < pcepDeadTimerValue;
+    set pcepKeepaliveTimer := 0;
+    informal "--set pcepKeepaliveTimer";
+    output TCP_Data_PCEP_Keepalive_req();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+
+  deadline eager;
+  when pcepDeadTimer = pcepDeadTimerValue;
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+endstate;
+
+state SessionUP_TCP_Data_PCEP_Keepalive_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+endstate;
+
+state SessionUP_TCP_Data_PCEP_PCReq_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false) and (pcepPCReqParameter.rpObjectExist = true) and (pcepPCReqParameter.endPointObjectExist = true);
+    output PCEP_PCReq_ind();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task pcepPCReqParameter.rpObjectExist := false;
+    task pcepPCReqParameter.endPointObjectExist := false;
+      nextstate SessionUP;
+
+  provided (errorInPCEPMessage = false) and (pcepPCReqParameter.rpObjectExist = false) and (pcepPCReqParameter.endPointObjectExist = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 6;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);   
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task pcepPCReqParameter.rpObjectExist := false;
+    task pcepPCReqParameter.endPointObjectExist := false;
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+
+  provided (errorInPCEPMessage = false) and (pcepPCReqParameter.rpObjectExist = true) and (pcepPCReqParameter.endPointObjectExist = false);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 6;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 3;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);   
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task pcepPCReqParameter.rpObjectExist := false;
+    task pcepPCReqParameter.endPointObjectExist := false;
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+
+  provided (errorInPCEPMessage = false) and (pcepPCReqParameter.rpObjectExist = false) and (pcepPCReqParameter.endPointObjectExist = false);
+    if (MaxOfErrorObject >= 2) then
+      task pcepErrorParameter.numberOfErrorObject := 2;
+      task pcepErrorParameter.errorObjectList[0].errorType := 6;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+      task pcepErrorParameter.errorObjectList[1].errorType := 6;
+      task pcepErrorParameter.errorObjectList[1].errorValue := 3;
+    else
+      task pcepErrorParameter.numberOfErrorObject := 1;
+      task pcepErrorParameter.errorObjectList[0].errorType := 6;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    endif
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);   
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+endstate;
+
+state SessionUP_TCP_Data_PCEP_PCRep_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false) and (pcepPCRepParameter.rpObjectExist = true);
+    output PCEP_PCRep_ind();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    task pcepPCRepParameter.rpObjectExist := false;
+      nextstate SessionUP;
+
+  provided (errorInPCEPMessage = false) and (pcepPCRepParameter.rpObjectExist = false);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 6;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   
+    output TCP_Data_PCEP_Error_req(pcepErrorParameter);   
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+endstate;
+
+state SessionUP_TCP_Data_PCEP_Noti_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false);
+    output PCEP_Noti_ind();
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+      nextstate SessionUP;
+endstate;
+
+state SessionUP_TCP_Data_PCEP_Error_ind_decision #unstable ;
+  provided (errorInPCEPMessage = true);
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    task pcepErrorParameter.errorObjectList[0].errorType := 1;
+    task pcepErrorParameter.errorObjectList[0].errorValue := 1;
+    output PCEP_Error_ind(pcepErrorParameter);   /* Temporary Value */
+    output TCP_Data_PCEP_Close_req();
+    output TCP_Close_req();
+      nextstate ClearResources;
+
+  provided (errorInPCEPMessage = false);
+    output PCEP_Error_ind(pcepErrorParameter);
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    /* re-initialize internal variables */
+    call Init_pcepErrorParameter (pcepErrorParameter);
+/*
+    task pcepErrorParameter.numberOfErrorObject := 1;
+    if MaxOfErrorObject = 1 then
+      task pcepErrorParameter.errorObjectList[0].errorType := 1;
+      task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+    else
+      if MaxOfErrorObject = 2 then
+        task pcepErrorParameter.errorObjectList[0].errorType := 1;
+        task pcepErrorParameter.errorObjectList[0].errorValue := 4;
+        task pcepErrorParameter.errorObjectList[1].errorType := 1;
+        task pcepErrorParameter.errorObjectList[1].errorValue := 4;
+      else
+        informal "--Error! MaxOfErrorObject > 2";
+      endif
+    endif
+*/
+      nextstate SessionUP;
+endstate;
+
+state ClearResources #unstable ;
+  provided true;
+    task ({PCEPMain}0).childInfoTable[channelId].childPid_exist := false;
+    task ({PCEPMain}0).childInfoTable[channelId].childPid := nil;
+    task ({PCEPMain}0).childInfoTable[channelId].peerId := 0;
+    task ({PCEPMain}0).childInfoTable[channelId].channelId := 0;
+    task ({PCEPMain}0).childInfoTable[channelId].previousState := ({PCEPMain}0).childInfoTable[channelId].currentState;
+    task ({PCEPMain}0).childInfoTable[channelId].currentState := Idle;
+    task ({PCEPMain}0).childInfoTable[channelId].initFromApp := false;
+    task ({PCEPMain}0).numOfChild := ({PCEPMain}0).numOfChild - 1;
+    informal "--ClearResources";
+      stop;
+endstate;
+endprocess;
+endsystem;
+
+

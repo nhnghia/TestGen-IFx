@@ -1,0 +1,148 @@
+system ETCS;
+type INT = range 1..10;
+signal getPosition();
+signal position(INT);
+signal report(INT);
+signal MA(INT);
+signal EoA(INT);
+signal setSpeed(INT);
+signal break();
+signal emergence();
+signalroute r_to_o(1)
+  from r to o
+  with MA,EoA;
+signalroute o_to_r(1)
+  from o to r
+  with report;
+signalroute o_to_e(1)
+  from o to e
+  with getPosition;
+signalroute e_to_o(1)
+  from e to o
+  with position;
+signalroute o_to_env(1)
+  from o to env
+  with setSpeed,break,emergence;
+process r(1);
+procedure new_x;
+  returns INT;
+  {#
+    return rand() % 10;
+  #}
+endprocedure;
+procedure new_x1;
+  returns INT;
+  {#
+    return rand() % 10;
+  #}
+endprocedure;
+
+var x INT private;
+var x1 INT private;
+var x3 INT private;
+
+state s0 #start ;
+  x := call new_x();
+  output MA(x);
+  nextstate s1;
+endstate;
+
+state s1 ;
+  x1 := call new_x1();
+  output EoA(x1);
+  nextstate s2;
+endstate;
+
+state s2 ;
+  input report(x3);
+  nextstate s3;
+endstate;
+
+state s3 ;
+  provided (x1 >= x) and (x3 <= x);
+  informal "success";
+  nextstate s4;
+endstate;
+
+state s4 ;
+  stop;
+endstate;
+
+endprocess;
+process o(1);
+procedure new_x3;
+  returns INT;
+  {#
+    return rand() % 10;
+  #}
+endprocedure;
+
+var x INT private;
+var x1 INT private;
+var x2 INT private;
+var x3 INT private;
+
+state s0 #start ;
+  input MA(x);
+  nextstate s1;
+endstate;
+
+state s1 ;
+  input EoA(x1);
+  nextstate s2;
+endstate;
+
+state s2 ;
+  input position(x2);
+  nextstate s3;
+endstate;
+
+state s3 ;
+  x3 := call new_x3();
+  output report(x3);
+  nextstate s4;
+endstate;
+
+state s4 ;
+  provided (x1 >= x) and (x3 <= x);
+  informal "success";
+  nextstate s5;
+endstate;
+
+state s5 ;
+  stop;
+endstate;
+
+endprocess;
+process e(1);
+procedure new_x2;
+  returns INT;
+  {#
+    return rand() % 10;
+  #}
+endprocedure;
+
+var x2 INT private;
+var x1 INT private;
+var x INT private;
+var x3 INT private;
+
+state s0 #start ;
+  x2 := call new_x2();
+  output position(x2);
+  nextstate s1;
+endstate;
+
+state s1 ;
+  provided (x1 >= x) and (x3 <= x);
+  informal "success";
+  nextstate s2;
+endstate;
+
+state s2 ;
+  stop;
+endstate;
+
+endprocess;
+endsystem;
+

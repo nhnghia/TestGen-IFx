@@ -1,0 +1,252 @@
+system ETCS;
+
+const SD = 300;      /*Subset-026.4. A3.1 the safety distance between two ETCS trains is 300m*/ 
+const N_TRAINS = 1; /*The maximum number of Trains at startup */
+const N_RBCS   = 0;
+
+type ID = range 0 .. 100;
+type Location = range 1 .. 100;
+type Distance = range 1 .. 100;
+type Timeout  = range 0 .. 100;
+type Size     = range 1 .. 10;	/*number of sections in a MA*/
+type Bool     = range 0 .. 1;
+
+const MAX_SPEED = 500;
+type Speed    = range 0 .. MAX_SPEED;
+
+type DangerPointInfo = record
+	distance Distance; /*distance from end of section to danger point*/
+	speed Speed;       /*release speed related to danger point*/
+endrecord;
+
+
+type OverlapInfo = record
+	distance Distance;	   /*distance from end of section to end of overlap*/
+	timeout Timeout;
+	distanceTimeout Timeout; /*distance from overlap timeout start location to end of section*/
+	speed Speed;             /*release speed related to overlap*/
+endrecord;
+
+type Section = record
+	distance Distance;     /*length of section*/
+	timeout Timeout;       /* optional */
+	timeoutStop Distance;/* optional: distance from beginning of section to Section Timeout Stop location*/
+endrecord;
+
+	/* for End section only */
+type EndSection = record
+	distance Distance;     /*length of section*/
+	timeout Timeout;       /* optional */
+	timeoutStop Distance;/* optional: distance from beginning of section to Section Timeout Stop location*/
+	
+	endTimeout Timeout;
+	endDistance Distance;  /*distance from the endTimeout start location to the end of the last section*/
+	dangerInfo DangerPointInfo;
+	overlapInfo OverlapInfo;
+endrecord;
+
+const N_SECTIONS = 5;    /*maximum number of sections in an MA*/
+type Sections = array [N_SECTIONS] of Section;
+
+/*Struct of Movement Authority*/
+type MovementAuthority = record
+	//size Size; /*Number of Sections composing the distance to End of Authority*/
+	//sections Sections;
+	//endSection EndSection;
+	distance Distance;
+	speed Speed;
+endrecord;
+
+type Reason = enum
+	DRIVER, TIME_BEFORE_EOA_LOA, TIMER_EXPIRED, TRACK_DES, TRACK_FREEUP
+endenum;
+
+
+
+signal MA(MovementAuthority);
+
+signal RequestToStopEarlier();/* Subset0026.3.7.2.4 from RBC only */
+/*Subset0026 3.10.2*/
+signal EmergencyMessages();	 /* Subset0026.3.7.2.4 from RBC only */
+
+
+
+signal TemporarySpeedRestrictions();
+
+signal MARequest(Location);
+
+
+signal NeedSendMARequest();	/*3.8.2.7*/
+
+type STATUS = enum
+	NORMAL, INDICATION, OVERSPEED, WARNING, INTERVENTION
+endenum;
+
+/*from ENV to OBU*/
+signalroute RBC_to_OBU(1)
+	from RBC to OBU	
+	with MA;
+
+signalroute OBU_to_RBC(1)
+	from OBU to RBC
+	with MARequest;
+	
+signalroute Driver_to_OBU(1)
+	from env to OBU
+	with NeedSendMARequest;
+	
+signal CurrentStatus(STATUS);
+signal ESpeed(Speed);
+signal ELocation(Location);
+	
+signalroute ENV_to_OBU(1)
+	from env to OBU
+	with TemporarySpeedRestrictions, CurrentStatus, ESpeed, ELocation;
+	
+/*from OBU to ENV*/
+signal ServiceBrakingCmd(Bool);
+signal EBcmd(Bool);
+signal DMIcmd(Speed);
+
+signal EmergencyBrake();
+
+signalroute OBU_to_ENV(1)
+	from OBU to env
+	with ServiceBrakingCmd, EBcmd, DMIcmd, EmergencyBrake;
+
+//RBC
+signal DLocation(Location);
+signalroute ENV_to_RBC(1)
+	from env to RBC
+	with DLocation;
+
+
+
+/////////////////////////////////////////////////////////////////////
+process OBU(N_TRAINS);
+var m MovementAuthority;
+var v Speed;
+var c clock;
+var h clock;
+var l Location;
+var rbc pid;
+ /* the initial state of the train; the train in this state is not controlled by the RBC */
+state init #start ;
+	input ESpeed(v);
+		set c := 0;
+		set h := 0;
+		nextstate q1;
+endstate;
+state q1;
+	when h=1;
+	input ELocation(l);
+//		fork RBC(self);
+		rbc := fork RBC(self);
+		output MARequest(l) to rbc;
+		nextstate q2;
+endstate;
+
+state q2 ;
+	when h > 2;
+	input MA(m);
+		nextstate NORMAL;
+endstate;
+
+state NORMAL #unstable ;
+	provided v > m.speed;		/*3.13.10.5.4 t2 */
+		output EBcmd(1);
+		output DMIcmd(m.speed);
+		
+		nextstate INTERVENTION;
+	provided v <= m.speed;		/*3.13.10.5.4 t1 */
+		output EBcmd(0);
+		output DMIcmd(m.speed);
+		
+		nextstate INDICATION;
+endstate;
+
+state INDICATION ;
+	provided v > m.speed;		/*3.13.10.5.4 t2 */
+		output EBcmd(1);
+		output DMIcmd(m.speed);
+		
+		nextstate INTERVENTION;
+		
+	input MA(m);
+		nextstate -;
+	input ESpeed(v);
+		nextstate -;
+	input ELocation(l);
+		nextstate -;
+	
+	deadline lazy;
+	when c > 60;
+		reset c;
+		output MARequest(l);
+		nextstate -;
+endstate;
+
+
+state INTERVENTION;
+	provided v = 0;				  /*3.13.10.5.4 ro: standstill*/
+		output EBcmd(0);
+		output DMIcmd(m.speed);
+		nextstate INDICATION;
+	provided v > 0;
+	input ESpeed(v);
+		nextstate -;	
+endstate;
+/*
+state SERVICE_BREAK;
+	nextstate EMERG_BREAK;
+endstate;
+state EMERG_BREAK;
+endstate;
+*/
+endprocess;
+
+
+process RBC(N_RBCS);
+	fpar obu pid;
+	
+procedure getReleaseSpeed;
+	fpar d Distance;
+	returns Speed;
+   {#
+     return rand() % d;
+   #}
+endprocedure;
+
+
+var m MovementAuthority;
+var x Location;
+var v Speed;
+var y Location;
+var d Distance;
+var c clock;
+
+state init #start ;
+	input DLocation(x);
+	nextstate IDLE;
+endstate;
+
+state IDLE ;
+	deadline lazy;
+	input MARequest(y);
+		nextstate MA;
+	input DLocation(x);
+		nextstate IDLE;
+	when c >= 60;
+		nextstate MA;
+endstate;
+
+state MA #unstable ;
+		task m.distance := x-y;
+		m.speed := call getReleaseSpeed(x-y);
+		output MA(m) to obu;
+		reset c;
+		nextstate IDLE;
+endstate;
+endprocess;
+
+endsystem;

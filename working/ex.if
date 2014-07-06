@@ -1,0 +1,75 @@
+system example;
+type int    = range 1 .. 2;
+signal Input(int);
+signal Submit(int);
+signal Report(int);
+signal Output(int);
+
+signalroute In(1)
+	from env to client
+	with Input;
+signalroute Out(1)
+	from client to env
+	with Output;
+signalroute Req(1)
+	from client to server
+	with Submit;
+signalroute Resp(1)
+	from server to client
+	with Output;
+
+
+process client(1);
+var x int := 0	;
+var spid pid;
+	state s0 #start ;
+		input Input(x);
+			task x := x+2;
+			spid := fork server(self);
+			output Submit(x) to spid;
+			nextstate s1;
+	endstate;
+	state s1 ;
+		input Report(x);
+			output Output(x);
+			nextstate s2 ;
+	endstate;
+	
+	state s2 #stop ;
+	endstate;
+endprocess;
+
+
+process server(0);
+	fpar parent pid;
+var y int := 0;
+var c clock ;
+
+	state q0 #start ;
+		input Submit(y);
+			task y := 0;
+			set c := 5;
+			nextstate q1 ;
+	endstate;
+	
+	state q1;
+		when c >= 10;
+			output Report(y) to parent;
+			reset c;
+			stop;
+	endstate;
+endprocess;
+
+endsystem;
+
+/*
+pure observer obs;
+var p1 pid;
+var md integer;
+
+state idl #start ;
+	match input Submit(md) in p1;
+		informal "--match";
+		nextstate -;
+endstate;
+endobserver;*/

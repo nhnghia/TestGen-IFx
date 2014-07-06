@@ -1,0 +1,1 @@
+cd ../src/; make all; make install; cd ../working; ./start-generation.sh -f server -d 10 -s bfs -p server/demo_tps/ server/demo_tcs

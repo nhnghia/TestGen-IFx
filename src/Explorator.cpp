@@ -34,17 +34,13 @@ Explorator::Explorator(const IfEngine* engine) :
 	srand(static_cast<unsigned>(time(NULL)));
 	srand((unsigned) time(0));
 
-	output_label.open("output.label", ios_base::app);
 	output_stat.open("output.stat", ios_base::app);
 
-	if (!output_label)
-		printf("\n >>> File 'output.label' not open ! \n");
 	if (!output_stat)
 		printf("\n >>> File 'output.stat' not open ! \n");
 }
 
 Explorator::~Explorator() {
-	output_label.close();
 	output_stat.close();
 }
 

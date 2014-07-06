@@ -75,7 +75,6 @@ protected:
 
 	TestCase testCase;
 
-	ofstream output_label;
 	ofstream output_stat;
 	ifstream input_sc;                    //States Format File
 

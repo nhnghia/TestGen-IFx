@@ -18,7 +18,7 @@ RandomExplorator::~RandomExplorator() {
 
 void RandomExplorator::visitAll(int depth) {
 	Explorator::visitAll(depth);
-
+	cout <<endl <<"====Random Explorator====================="<<endl;
 
 	IfConfig *start = m_engine->start();
 
@@ -51,12 +51,11 @@ void RandomExplorator::visitAll(int depth) {
 		}*/
 
 		int d = int(rand() % n);	//random from 0 to n
-
+		cout <<currentDepth <<". selected branch " <<d+1 <<"/" <<n <<endl;
 		//get
 		Transition t = transitions.at(d);
 		//add t to testCase
 		testCase.add(t.label);
-
 
 		transitions.clear();
 		m_engine->run(t.target);

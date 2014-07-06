@@ -1,0 +1,100 @@
+This file explains how to use the TestGenIF:
+
+	1/ Program Requirements
+	2/ The TestGenIF Directory Contents
+	3/ Edit the Stop Conditions
+	4/ Generate test cases
+	
+	
+1/ Program Requirements
+===========================================================================================================
+a. IF2-0 Distribution
+	- You must install libstdc++5 (e.g. by apt-get install), the package m4 
+		and the last version of g++-x.y 
+	- You need change the 
+b. TestGenIF Distribution	
+	- You need change auto
+d. You must add these lines to your ~/.bashrc:
+	# IF2-0
+	export IF=/home/lallali/IF-2.0
+	export PATH=$IF/com:$PATH
+	export PATH=$IF/bin/`arch`:$PATH
+	export PATH=$IF/src/simulator:$PATH
+
+	# TestGenIF
+	export TestGenIF=/home/lallali/testgen-if
+	export PATH=$TestGenIF/lib:$PATH
+
+   and type: $ source ~/.bashrc
+===========================================================================================================
+
+
+2/ The TestGenIF Directory Contents
+===========================================================================================================
+a. In TestGenIF/working directory:
+
+   	1. Makefile
+   	2. Executable Scripts : testgenif, start-generation.sh, optimize-test-cases.sh 
+		(You need eventually tape chmod +x (these scripts))
+	3. IF Specification : pcep.if
+	4. The demo directory demo/ contained two subdirectory :
+		- demo_tps for test purposes (inputs)
+		- demo_tcs for test cases (results)
+	5. TestGenIF commands :
+		- For Test Generation (phase 1) : 
+			./start-generation.sh -f pcep -d 30 -s bfs -p demo/demo_tps/ -c demo/demo_tcs  
+		- For Test Cases Optimization ((phase 2, optional) : 
+			./optimize-test-cases.sh -i demo/demo_tcs/ -o demo/demo_ftcs
+	
+b. In TestGenIF/src directory:
+
+	- Bfs.C, Dfs.C
+	- compile-all.sh, compile-tp.sh 
+		(You need eventually tape chmod +x (these scripts))
+	- mainExplorator.C, mainExplorator.h
+	- Makefile
+	- ManageOutputFiles.C, ManageStopConditions.C
+	- state_list.C, state_list.h
+	- state_queue.C, state_queue.h
+	- state_stack.C, state_stack.h
+	- test_purpose.C
+
+c. In TestGenIF/lib directory:
+	- filter1.sh, filter2.sh, filter-tp.sh, generate-path.sh, get-clock-id.sh
+		(You need eventually tape chmod +x (these scripts))
+	- get-parameter.sh, get-process-name.sh, get-value.sh 
+		(You need eventually tape chmod +x (these scripts))
+	- Bfs.o, mainExplorator.o, ManageOutputFiles.o, ManageStopConditions.o 
+	- state_list.o, state_queue.o, state_stack.o
+===========================================================================================================
+
+
+3/ Edit the Stop Conditions
+===========================================================================================================
+...
+===========================================================================================================
+
+4/ Generate Test Cases
+===========================================================================================================
+a. The phase 1 - Test Generation 
+	In order to generate test cases for an IF specification pcep.if, 
+	you can run the generator with the following command :
+		./start-generation.sh -f pcep -d max_depth_of_the_search -s [-bfs |-dfs] -p demo/demo_tps/ -c demo/demo_tcs  
+	where:
+	- pcep is the IF specification without extension ".if";
+	- bfs | dfs the search strategy;
+	- max_depth_of_the_search is the max depth of the partial search before jumping;
+	- demo/demo_tps is the directory of test purposes (inputs)
+	- demo/demo_tcs is the directory of the generated test cases
+
+	For example (contained in command1.example), 
+		./start-generation.sh -f pcep -d 20 -s bfs -p demo/demo_tps/ -c demo/demo_tcs  
+
+b. The phase 2 (optional) - Test Cases Optimization 
+	In order to optimize the generated test cases, you can run the following command (contained in command2.example) :
+		./optimize-test-cases.sh -i demo/demo_tcs/ -o demo/demo_ftcs 
+	Where:
+	- demo/demo_tcs/ the input test cases directory
+	- demo/demo_ftcs the generated filtered test cases directory  	
+===========================================================================================================
+

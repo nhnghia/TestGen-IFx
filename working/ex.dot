@@ -1,0 +1,20 @@
+digraph name {0 -> 2 [label="<<{agent}0 ?Input{p1=2}{agent}0>> "];
+2 -> 3 [label="<<{agent}0 #server{server}0>> "];
+3 -> 1 [label="<<{agent}0 !Submit{p1=4}{server}0>> "];
+1 -> 4 [label="<<{server}0 ?Submit{p1=4}{server}0>> "];
+4 -> 5 [label="<<{time}0 t/5>> "];
+5 -> 7 [label="<<{server}0 i>> "];
+7 -> 6 [label="<<{server}0 !Report{p1=0}{agent}0>> "];
+6 -> 9 [label="<<{agent}0 ?Report{p1=0}{agent}0>> "];
+9 -> 8 [label="<<{agent}0 !Output{p1=0}>> "];
+8 -> 8 [label="<<{time}0 t/oo>> "];
+0 -> 11 [label="<<{agent}0 ?Input{p1=1}{agent}0>> "];
+11 -> 12 [label="<<{agent}0 #server{server}0>> "];
+12 -> 10 [label="<<{agent}0 !Submit{p1=3}{server}0>> "];
+10 -> 13 [label="<<{server}0 ?Submit{p1=3}{server}0>> "];
+13 -> 14 [label="<<{time}0 t/5>> "];
+14 -> 16 [label="<<{server}0 i>> "];
+16 -> 15 [label="<<{server}0 !Report{p1=0}{agent}0>> "];
+15 -> 17 [label="<<{agent}0 ?Report{p1=0}{agent}0>> "];
+17 -> 8 [label="<<{agent}0 !Output{p1=0}>> "];
+}

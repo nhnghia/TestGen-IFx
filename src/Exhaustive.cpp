@@ -75,8 +75,6 @@ void Exhaustive::visitAll(int depth) {
 
 
 
-
-
 //Container
 Container::Container(bool isStack) {
 	this->isStack = isStack;
