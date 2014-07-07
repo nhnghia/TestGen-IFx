@@ -9,28 +9,12 @@
 #define BFS_H_
 #include <queue>
 #include <stack>
+#include <vector>
 
 #include "Explorator.h"
-
+#include "simulator.h"
+#include "explorator.h"
 namespace tsp {
-
-/**
- * A container that is either a Stack or a Queue depending on parameter of the constructor
- */
-class Container{
-public:
-	/**
-	 * Create a Stack if isStack==true, else a Queue
-	 */
-	Container(bool isStack);
-	void push(IfConfig *s);
-	IfConfig *pop();
-	bool isEmpty();
-private:
-	bool isStack;
-	queue<IfConfig *> queue;
-	stack<IfConfig *> stack;
-};
 
 /**
  * Exhaustively visit based on DFS or BFS
@@ -42,12 +26,21 @@ public:
 
 	void explore(IfConfig* source, IfLabel* label, IfConfig* target);
 	void visitAll(int depthlim);
-protected:
-	Container *container;
 private:
 	int noVisitedBranches;
 	TestCase testCase;
 	void visit(IfConfig* source, IfLabel* label, IfConfig* target);
+
+struct Transition{
+		IfConfig *source;
+		IfConfig *target;
+		IfLabel  *label;
+	};
+	queue<vector<Transition> > m_queue;
+	vector<Transition> currentQueue;
+
+	int numTestCases;
+	void printTestCase();
 };
 
 } /* namespace tsp */

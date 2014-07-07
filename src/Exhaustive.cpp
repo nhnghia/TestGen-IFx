@@ -13,9 +13,9 @@ enum{
 };
 
 Exhaustive::Exhaustive(const IfEngine* engine, bool isDfs) :
-		Explorator(engine) {
-	container = new Container(isDfs);
-	noVisitedBranches = 0;
+		Explorator(engine)
+{
+
 }
 
 Exhaustive::~Exhaustive() {
@@ -27,83 +27,62 @@ Exhaustive::~Exhaustive() {
  */
 void Exhaustive::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 	//at each state, visit only one branch
-	if (noVisitedBranches == 1)
-		return;
-	noVisitedBranches ++;
-
-	visit(source, label, target);
-
-	if (currentDepth < maxDepth && target != NULL){
-		container->push(target);
+	//cout <<currentQueue.size() <<"/" <<maxDepth <<"- visite : " << label->string() <<endl;
+	if (target != NULL && currentQueue.size() < maxDepth){
+		vector<Transition> trans (currentQueue);
+		Transition t;
+		t.source = source->copy();
+		t.target = target->copy();
+		t.label  = label->copy();
+		trans.push_back(t);
+		m_queue.push(trans);
 	}
+	else{
+		printTestCase();
+	}
+
 }
 
-void Exhaustive::visit(IfConfig* source, IfLabel* label, IfConfig* target) {
-
-	int n = label->getLength();
+void Exhaustive::printTestCase(){
+	numTestCases ++;
+	TestCase testCase;
+	int n = currentQueue.size();
 	for (int i=0; i<n; i++){
-		Event *ev = Event::parser(label->getAt(i));
-		if (ev != NULL){
-			testCase.push_back(ev);
-		}
+		Transition t = currentQueue.at(i);
+		testCase.add(t.label);
 	}
-	if (testCase.size() == maxDepth || target == NULL)
-		testCase.print(std::cout);
-
-	checkPurpose(source, label, target, maxDepth);
+	cout <<"--------------" <<endl;
+		cout <<"Test case:" <<numTestCases <<endl;
+		testCase.print(cout);
+		cout <<"--------------" <<endl;
 }
 
 
 void Exhaustive::visitAll(int depth) {
 	Explorator::visitAll(depth);
 
+	cout <<"visit all, depth: " << depth <<endl;
+	numTestCases = 0;
+	currentQueue.clear();
+	while (!m_queue.empty())
+		m_queue.pop();
+
 	IfConfig* start = m_engine->start();
-	container->push(start);
+	m_engine->run(start);
 
-	while (!container->isEmpty() && currentDepth < depth){
-		//std::cout <<"visitAll==="<<endl;
-		currentDepth ++;
+	while(!m_queue.empty()){
+		currentQueue = m_queue.front();
+		m_queue.pop();
+		//get last element of currentQueue
+		Transition t = currentQueue.back();
 
-		IfConfig *node = container->pop();
-
-		noVisitedBranches = 0;
-
-		//visit all outgoing transitions from the state "node"
-		m_engine->run(node);
+		m_engine->run(t.target);
 	}
+
+	cout <<endl <<"Number of test cases: " <<numTestCases<<endl;
 }
 
 
 
-//Container
-Container::Container(bool isStack) {
-	this->isStack = isStack;
-}
-
-void Container::push(IfConfig* s) {
-	if (isStack){
-		stack.push(s);
-	}else
-		queue.push(s);
-}
-
-IfConfig* Container::pop() {
-	IfConfig *s;
-	if (isStack){
-		 s = stack.top();
-		 stack.pop();
-	}else{
-		s = queue.front();
-		queue.pop();
-	}
-	return s;
-}
-
-bool Container::isEmpty(){
-	if (isStack)
-		return stack.empty();
-	else
-		return queue.empty();
-}
 } /* namespace tsp */
 

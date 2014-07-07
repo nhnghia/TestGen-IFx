@@ -26,7 +26,6 @@ long int StateStack::put(IfConfig *s, long int depth, long int father) {
 	p.pos = pos_current;
 	p.depth = depth + 1;
 	p.father = father;
-	p.label_id = -1;
 	_state.push(p);
 	pos_current++;
 	return p.pos;

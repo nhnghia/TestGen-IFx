@@ -25,7 +25,7 @@
 
 #define if_N_RBCS_constant 0
 
-#define if_MAX_SPEED_constant 121
+#define if_MAX_SPEED_constant 200
 
 #define if_N_SECTIONS_constant 5
 
@@ -47,8 +47,8 @@ typedef if_integer_type if_Location_type;
 #define if_Location_compare(x,y) if_integer_compare(x,y)
 #define if_Location_print(x,f) if_integer_print(x,f)
 #define if_Location_print_xml(x,b) if_integer_print_xml(x,b)
-#define if_Location_reset(x) (x)=100
-#define if_Location_iterate(x) for(x=100;x<=100;x++)
+#define if_Location_reset(x) (x)=0
+#define if_Location_iterate(x) for(x=0;x<=10;x++)
 #define if_Location_eq(x,y) if_Location_compare(x,y)==0
 #define if_Location_ne(x,y) if_Location_compare(x,y)!=0
 
@@ -58,8 +58,8 @@ typedef if_integer_type if_Distance_type;
 #define if_Distance_compare(x,y) if_integer_compare(x,y)
 #define if_Distance_print(x,f) if_integer_print(x,f)
 #define if_Distance_print_xml(x,b) if_integer_print_xml(x,b)
-#define if_Distance_reset(x) (x)=100
-#define if_Distance_iterate(x) for(x=100;x<=100;x++)
+#define if_Distance_reset(x) (x)=0
+#define if_Distance_iterate(x) for(x=0;x<=10;x++)
 #define if_Distance_eq(x,y) if_Distance_compare(x,y)==0
 #define if_Distance_ne(x,y) if_Distance_compare(x,y)!=0
 
@@ -102,8 +102,8 @@ typedef if_integer_type if_Speed_type;
 #define if_Speed_compare(x,y) if_integer_compare(x,y)
 #define if_Speed_print(x,f) if_integer_print(x,f)
 #define if_Speed_print_xml(x,b) if_integer_print_xml(x,b)
-#define if_Speed_reset(x) (x)=120
-#define if_Speed_iterate(x) for(x=120;x<=if_MAX_SPEED_constant;x++)
+#define if_Speed_reset(x) (x)=0
+#define if_Speed_iterate(x) for(x=0;x<=if_MAX_SPEED_constant;x++)
 #define if_Speed_eq(x,y) if_Speed_compare(x,y)==0
 #define if_Speed_ne(x,y) if_Speed_compare(x,y)!=0
 

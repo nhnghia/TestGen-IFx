@@ -10,12 +10,12 @@ SRC_2 = state_list.C state_queue.C state_stack.C
 OBJS = $(SRC_1:.cpp=.o) $(SRC_2:.C=.o)
 
 all: $(OBJS)
-	${CC} -c -o main.o $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include  main.C
+	${CC} -c -o main.o $(CFLAGS) -I${IF}/src/simulator -I${IF}/src/simulator-t -I${XERCESLIB}/../include  main.C
 	
 $(OBJS): %.o : %.h
 
 .cpp.o:
-	${CC} $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include  -c $<
+	${CC} $(CFLAGS) -I${IF}/src/simulator -I${IF}/src/simulator-t -I${XERCESLIB}/../include  -c $<
 
 .C.o:
 	${CC} $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include  -c $<

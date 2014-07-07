@@ -11,6 +11,7 @@
 #include <iostream>
 #include <signal.h>
 #include <execinfo.h>
+#include <sys/time.h>
 
 #include "state_queue.h"
 #include "state_stack.h"
@@ -30,6 +31,10 @@ void handler(int sig) {
 
 /* ===== MAIN ===== */
 int main(int argc, char * argv[]) {
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
 	signal(SIGSEGV, handler);   // install our handler
 
 	static const unsigned DEFAULTDEPTH = 20;
@@ -61,11 +66,8 @@ int main(int argc, char * argv[]) {
 			else if (!strcmp(argv[i], "-p"))
 				sc_file = (i == argc - 1) ? NULL : argv[i + 1];
 			else if (!strcmp(argv[i], "-d")) {
-				if (i != argc - 1) {
-					char *p_conv;
-					int number = (int) strtol(argv[i + 1], &p_conv, 10);
-					if (*p_conv == 0)
-						depthlim = number;
+				if (i < argc) {
+					depthlim = atoi(argv[i + 1]);
 				}
 			}
 		}
@@ -74,7 +76,8 @@ int main(int argc, char * argv[]) {
 	IfEngine* engine = new IfIterator();
 	tsp::Explorator *expl = NULL;
 	if (traversal == BFS || traversal == DFS) {
-		expl = new tsp::Exhaustive(engine, traversal == BFS);
+		tsp::Exhaustive *expl = new tsp::Exhaustive(engine, traversal == BFS);
+		expl->visitAll(depthlim);
 	}
 	else if (traversal == HIT_OR_JUMP) {
 		expl = new tsp::HitOrJump(engine);
@@ -84,5 +87,10 @@ int main(int argc, char * argv[]) {
 	}
 	if (expl)
 		expl->visitAll(depthlim);
+
+	gettimeofday(&tp, NULL);
+	long int ms2 = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+	cout <<endl <<"Elapsed time: " <<(ms2 - ms)/100.0 <<" seconds" <<endl;
 	return 0;
 }
