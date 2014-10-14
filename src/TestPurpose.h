@@ -14,6 +14,12 @@ class TestPurpose {
 public:
 	TestPurpose();
 	virtual ~TestPurpose();
+	/**
+	 *
+	 * @param filename
+	 * @return
+	 */
+	//bool load(string filename);
 };
 
 } /* namespace tsp */

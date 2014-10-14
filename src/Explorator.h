@@ -29,6 +29,9 @@ public:
 public:
 	virtual void explore(IfConfig* source, IfLabel* label, IfConfig* target);
 	virtual void visitAll(int depthlim);
+	int numberOfTestCasesGenerated;
+	string testCasesFolder;
+	bool isProjectTestCases;
 
 public:
 	void readTestPurposes(char* sc_file);
@@ -43,6 +46,9 @@ public:
 	void saveStat(short int i);
 
 protected:
+
+	void printTestCase();
+
 	int getTypeSignal(char* type);
 	void setTestPurposes();
 	long int checkTestPurpose(const IfConfig* source, IfLabel* label,

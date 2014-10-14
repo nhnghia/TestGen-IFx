@@ -18,7 +18,6 @@ RandomExplorator::~RandomExplorator() {
 
 void RandomExplorator::visitAll(int depth) {
 	Explorator::visitAll(depth);
-	cout <<endl <<"====Random Explorator====================="<<endl;
 
 	IfConfig *start = m_engine->start();
 
@@ -60,11 +59,7 @@ void RandomExplorator::visitAll(int depth) {
 		transitions.clear();
 		m_engine->run(t.target);
 	}
-
-	cout <<"--------------" <<endl;
-	cout <<"Test case:" <<endl;
-	testCase.print(cout);
-	cout <<"--------------" <<endl;
+	Explorator::printTestCase();
 }
 
 void RandomExplorator::explore(IfConfig* source, IfLabel* label, IfConfig* target){

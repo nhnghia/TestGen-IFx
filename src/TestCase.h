@@ -13,8 +13,13 @@
 #include <iostream>
 #include "Event.h"
 #include <map>
+#include <set>
+
 namespace tsp {
 
+/**
+ * Test Case is a sequence of @link Event
+ */
 class TestCase : public std::vector<Event*>{
 public:
 	TestCase();
@@ -26,12 +31,30 @@ public:
 	int add(IfLabel *label);
 	void print(std::ostream&);
 	/**
-	 * get a set of local test cases
-	 * @return a multimap, each element is <name,testCase> where "name" is name of component to test,
-	 * "testcase" is local test case of this tester
-	 * note: the local test case is "inverse" of local trace.
+	 * get a local test case of a partner
+	 * @param partner name of the partner
+	 * @return a local test case of tester to test this partner
+	 * note: the local test case is an "inverse" of local trace.
 	 */
-	map<string,TestCase> project();
+	TestCase project(string partner);
+
+	/**
+	 * print in MSC text http://www.mcternan.me.uk/mscgen/
+	 * @param
+	 */
+	void printMsc(ostream &);
+
+	/**
+	 * Cumulate a sequence of consecutive delays to unique one
+	 * and remove the last event if it is a delay
+	 */
+	void optimize();
+
+
+	/**
+	 * @return set of partners involved in this test case
+	 */
+	set<string> getPartners();
 };
 
 } /* namespace tsp */

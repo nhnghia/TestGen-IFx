@@ -23,6 +23,7 @@
 
 .C.o:
 #Nghia
+	echo "void IfObserverInstance::printXML(std::ostream& buf) const {}" >> $*.C ;
 	echo "void IfInstance::printXML(std::ostream& buf) const {}" >> $*.C ;
 	echo "void IfMessage::printXML(std::ostream& buf) const {}" >> $*.C ; 
 #end Nghia
@@ -37,7 +38,7 @@
 	${IF}/bin/`${IF}/com/arch`/if2m4 $(TIME) $*.if
 
 clean:
-	#-rm -f *~ $*.exe $*.g $*.x $*.y $*.so $*.o $*.h $*.C $*.m4 
+	-rm -f *~ $*.exe $*.g $*.x $*.y $*.so $*.o $*.h $*.C $*.m4 
 	-rm -f *~ *.exe *.g *.x *.y *.so *.o *.h *.C *.m4 output.* *.txt output.*.* message.xml *.value *.sequence *.suite
 
 

@@ -11,7 +11,7 @@ namespace tsp {
 
 HitOrJump::HitOrJump(const IfEngine* engine) :
 		Explorator(engine) {
-
+	setTestPurposes();
 	raiz = 0;
 	hit_position = -1;
 	jump_counter = 0;
@@ -30,24 +30,33 @@ void HitOrJump::visitAll(int depthlim) {
 	m_queue.put(start, -1, -1);
 	output_queue.put(start, -1, -1);
 
+
+	char c[6] = {'|', '/', '-', '|', '\\', '-'};
+	int i=0;
+	printf("  %c ", c[i]); fflush(stdout);
+
 	while (!m_queue.isEmpty()) {
 		state_node = m_queue.get();
+
+		i++;
+		if (i>=6) i=0;
+		printf("\b\b\b\b  %c ", c[i]); fflush(stdout);
+
 		if (state_node.state != NULL) {
-			cout <<endl<< "visitAll" <<endl;
+
 			if (state_node.depth > (depthlim - 1 + raiz)) {
 				jump_counter++;
-				printf(
-						" >>>> a Jump from State at Depth %ld to State at Depth %ld - Depth Limit = %d  \n",
+				printf("\n >>>> a Jump from State at Depth %ld to State at Depth %ld - Depth Limit = %d  \n",
 						raiz, state_node.depth, depthlim);
-				printf(
-						"_________________________________________________________________\n");
+				//printf("_________________________________________________________________\n");
 
 				m_queue.put(state_node);
 				jump_node = random_jump();
 				output_queue.getPath(jump_node);
 				//system(
 				//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
-				testCase.print(cout);
+				//testCase.print(cout);
+				printTestCase();
 				testCase.clear();
 
 				output_queue.clear();
@@ -60,7 +69,11 @@ void HitOrJump::visitAll(int depthlim) {
 				jump_node.father = -1;
 				output_queue.put(jump_node);
 			}
+
+			cout <<"OK"; fflush(stdout);
+
 			m_engine->run(state_node.state);
+
 		}
 	}
 	printf(" Fail! - All the Test Purposes are not satisfied.\n");
@@ -94,9 +107,10 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 	long int searched_depth = 0;
 	bool exist = false;
 	long int tmpDepth = -1;
-	cout <<".";
+
 
 	if ((state_node.depth + 1) != hit_position) {
+		cout <<"OkK"; fflush(stdout);
 		if (output_queue.getPos(target) == -1) {
 			m_queue.put(target, state_node.depth, state_node.pos);
 			testCase.add(label);
@@ -123,7 +137,8 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			output_queue.getPath(source_node);
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
-			testCase.print(cout);
+			//testCase.print(cout);
+			printTestCase();
 			testCase.clear();
 
 			saveStat(1);
@@ -145,7 +160,8 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			output_queue.getPath(source_node);
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
-			testCase.print(cout);
+			//testCase.print(cout);
+			printTestCase();
 			testCase.clear();
 
 			m_queue.clear();

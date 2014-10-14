@@ -22,12 +22,61 @@
 
 namespace tsp {
 
+void Explorator::printTestCase(){
+	numberOfTestCasesGenerated ++;
+	printf(" \b\b\b\b\b\b\b\b\b\b\b\b %10d ", numberOfTestCasesGenerated);
+	fflush(stdout);
+
+	//return;
+	stringstream ss;
+	ss << testCasesFolder <<"/" <<(numberOfTestCasesGenerated + 1) <<"_";
+	string path = ss.str();
+
+
+	//global test cases
+	string tcFilename(path);
+	tcFilename.append("global.tc");
+
+	ofstream out(tcFilename);
+	if (out.fail()){
+		fprintf(stderr, "\n Error: cannot write test cases to [%s]", testCasesFolder.c_str());
+		return;
+	}
+
+	testCase.optimize();
+	testCase.print(out);
+	out.close();
+
+
+	//local test cases
+	set<string> partners = testCase.getPartners();
+	if (isProjectTestCases)
+		for (set<string>::iterator i = partners.begin(); i != partners.end(); i++) {
+			string p = *i;
+
+			tcFilename = string(path);
+			tcFilename.append(p);
+			tcFilename.append(".tc");
+
+			ofstream o(tcFilename);
+			o <<"test";
+			TestCase t = testCase.project(p);
+			//t.print(cout);
+			t.optimize();
+			t.print(o);
+			o.close();
+		}
+}
+
+
+
+
 Explorator::Explorator(const IfEngine* engine) :
 		IfDriver(engine) {
+
+	testCasesFolder = "./";
 	maxDepth = 0;
 	currentDepth = 0;
-
-	setTestPurposes();
 
 	stateNumber = 0;
 
@@ -88,7 +137,7 @@ void Explorator::setTestPurposes() {
 void Explorator::printPurpose(int i, long int depth) {
 	int j;
 
-	printf("\t a Hit! - The Test Purpose tp%d is satisfied at Depth %ld:\n",
+	printf("\n a Hit! - The Test Purpose tp%d is satisfied at Depth %ld:\n",
 			i + 1 + numOrdPurposes, purposes[i].depth);
 	if (purposes[i].process != NULL)
 		printf("\t \t \"Process Instance = %s\"\n", purposes[i].process);
@@ -271,6 +320,7 @@ void Explorator::printOrdPurposes() {
  */
 
 void Explorator::printPurposes() {
+
 	int i, j;
 	for (i = 0; i < numPurposes; i++) {
 		printf("\t Test Purpose tp%d: \n", i + 1 + numOrdPurposes);
@@ -1053,10 +1103,15 @@ void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
 	DOMDocument *doc = tsp::Tool::parserXml(tsp::Tool::ifObject2Xml(state));
 	if (doc == NULL)
 		return;
+
 	DOMNodeList* list = doc->getElementsByTagName(XMLString::transcode(searchedVariable));
 	if (list == NULL)
 		return;
+
 	DOMNode *node = list->item(0);	//<x><integer value="0"/></x>
+	if (node == NULL)
+		return;
+
 	string str = tsp::Tool::getXmlAttributeValue(node, "value");
 	strcpy(value, str.c_str());
 }

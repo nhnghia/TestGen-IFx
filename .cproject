@@ -37,6 +37,7 @@
 									<listOptionValue builtIn="false" value="/Users/nhnghia/SudParis/software/if2/src/model"/>
 									<listOptionValue builtIn="false" value="/Users/nhnghia/SudParis/software/if2/src/simulator"/>
 									<listOptionValue builtIn="false" value="/Users/nhnghia/SudParis/software/if2/xerces/include"/>
+									<listOptionValue builtIn="false" value="/Users/nhnghia/SudParis/software/if2/src/simulator-t"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.801840529" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -116,6 +117,18 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/TestGen-IFx"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/TestGen-IFx"/>
+		</configuration>
+	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
+		<doc-comment-owner id="org.eclipse.cdt.ui.doxygen">
+			<path value=""/>
+		</doc-comment-owner>
+	</storageModule>
 </cproject>

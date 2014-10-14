@@ -1,6 +1,6 @@
 CC = g++
 AR = ar
-CFLAGS = -Wall -O3 -DABSTRACT  -fno-stack-protector -Wno-write-strings -Wno-deprecated -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-parameter -Wno-overloaded-virtual -g -rdynamic
+CFLAGS = -Wall -O3 -DABSTRACT -std=c++11 -fno-stack-protector -Wno-write-strings -Wno-deprecated -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-parameter -Wno-overloaded-virtual -g -rdynamic
 
 .SUFFIXES: .o .cpp .h
 

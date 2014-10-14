@@ -16,6 +16,7 @@
 #include "explorator.h"
 namespace tsp {
 
+
 /**
  * Exhaustively visit based on DFS or BFS
  */
@@ -27,9 +28,8 @@ public:
 	void explore(IfConfig* source, IfLabel* label, IfConfig* target);
 	void visitAll(int depthlim);
 private:
-	int noVisitedBranches;
-	TestCase testCase;
 	void visit(IfConfig* source, IfLabel* label, IfConfig* target);
+	bool isDfs;
 
 struct Transition{
 		IfConfig *source;
@@ -40,7 +40,6 @@ struct Transition{
 	vector<Transition> currentQueue;
 
 	int numTestCases;
-	void printTestCase();
 };
 
 } /* namespace tsp */

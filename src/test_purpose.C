@@ -30,9 +30,9 @@ for (i=0; i < numOrdPurposes;i++)
 	ordPurposes[i].depth = -1;
 }
 
-purposes[0].process = "{OBU}0";
-purposes[0].source = "INDICATION";
-purposes[0].target = "INTERVENTION";
-purposes[0].numVariables = 1;
-VariableData var = {"v", "180"};
-purposes[0].variables[0] = var;
+purposes[0].process = "{Client}0";
+purposes[0].source = "s3";
+purposes[0].target = "s4";
+purposes[0].numVariables = 0;
+//VariableData var = {"email2", "0"};
+//purposes[0].variables[0] = var;
