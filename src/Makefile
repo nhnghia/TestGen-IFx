@@ -1,6 +1,6 @@
 CC = g++
 AR = ar
-CFLAGS = -Wall -O3 -DABSTRACT -std=c++11 -fno-stack-protector -Wno-write-strings -Wno-deprecated -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-parameter -Wno-overloaded-virtual -g -rdynamic
+CFLAGS = -Wall -O3 -DABSTRACT -std=c++11 -fno-stack-protector -Wno-write-strings -Wno-deprecated -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-parameter -Wno-overloaded-virtual -g
 
 .SUFFIXES: .o .cpp .h
 
@@ -27,4 +27,4 @@ tp:
 	${CC} -c -o Explorator.o $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include Explorator.cpp -lstdc++
 
 install:
-	cp $(OBJS) main.o ../lib
+	cp $(OBJS) main.o ../lib >> /dev//null

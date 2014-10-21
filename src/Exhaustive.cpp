@@ -15,7 +15,6 @@ enum{
 Exhaustive::Exhaustive(const IfEngine* engine, bool isDfs) :
 		Explorator(engine){
 	this->isDfs = isDfs;
-	numTestCases = 0;
 }
 
 Exhaustive::~Exhaustive() {
@@ -38,16 +37,15 @@ void Exhaustive::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 		trans.push_back(t);
 
 		if (trans.size() == maxDepth){
-			numTestCases ++;
-			/*
-			testCase.clear();
-			int n = trans.size();
-			for (int i=0; i<n; i++){
-				Transition t = trans.at(i);
-				testCase.add(t.label);
-			}
-			*/
-			printTestCase();
+
+				testCase.clear();
+				int n = trans.size();
+				for (int i=0; i<n; i++){
+					Transition t = trans.at(i);
+					testCase.add(t.label);
+				}
+				testCase.print(cout);
+				printTestCase();
 		}else
 			m_queue.push(trans);
 
@@ -67,7 +65,6 @@ void Exhaustive::visitAll(int depth) {
 	printf ("\nGenerating test cases: %10d ", 0);
 	fflush(stdout);
 
-	numTestCases = 0;
 
 	currentQueue.clear();
 	while (!m_queue.empty())
@@ -90,16 +87,19 @@ void Exhaustive::visitAll(int depth) {
 		Transition t = currentQueue.back();
 
 		if (t.target == NULL){
-				numTestCases ++;
-				/*
+			int n = currentQueue.size();
+			if (n>0){
+
 				testCase.clear();
-				int n = currentQueue.size();
+
 				for (int i=0; i<n; i++){
 					Transition t = currentQueue.at(i);
 					testCase.add(t.label);
 				}
-				*/
-				printTestCase();
+				if (testCase.size() >0){
+					printTestCase();
+				}
+			}
 		}
 		else
 			m_engine->run(t.target);

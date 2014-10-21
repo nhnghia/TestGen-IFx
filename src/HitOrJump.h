@@ -8,6 +8,7 @@
 #ifndef HITORJUMP_H_
 #define HITORJUMP_H_
 #include "Explorator.h"
+#include <vector>
 
 namespace tsp {
 
@@ -30,6 +31,8 @@ private:
 	long int raiz;
 	long int hit_position;
 	int jump_counter;
+
+	void addLabelsToTestCase(vector<IfLabel *> lst);
 };
 
 } /* namespace tsp */

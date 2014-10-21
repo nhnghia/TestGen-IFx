@@ -13,30 +13,63 @@ TestCase::TestCase(){
 TestCase::~TestCase(){
 }
 
-void TestCase::optimize(){
+/**
+ * Sum up the consecutive Delays
+ */
+TestCase TestCase::optimize(){
+	TestCase lst;
+	int n = size();
+	int i=0;
 
-	for (int i=0; i<size(); i++){
-		Event *ev = at(i);
+	while (i<n){
+		Event *ev = at(i++);
+
 		//ev is Delay
 		if (dynamic_cast<Delay*>(ev) != NULL){
 			Delay *delay = dynamic_cast<Delay*>(ev);
 
+			while (i<n){
 			//find the next delay
-			if (i<size() - 1)
-				if (dynamic_cast<Delay*>(at(i+1)) != NULL){
-					delay->delay += dynamic_cast<Delay*>(at(i+1))->delay;
-					//remove
-					erase(begin()+i+1);
+				if (dynamic_cast<Delay*>(at(i)) != NULL){
+					delay->delay += dynamic_cast<Delay*>(at(i))->delay;
+					i++;
+				}else
+					break;
+			}
+
+			if (i<n)
+				lst.push_back(delay);
+		}else{
+			lst.push_back(ev);
+		}
+	}
+
+	//!;	{OBU}0;	 MARequest{10};	{RBC}0
+	//?;	env;	 DLocation{10};	{RBC}0
+	//delay 2
+	//?;	env;	 MARequest{10};	{RBC}0
+	//==> change the last "env" to "{OBU}0
+	n = lst.size();
+	for (int i=0; i<n; i++){
+		Event *ev = lst.at(i);
+		if (dynamic_cast<Input*>(ev) != NULL){
+			Input *input = (Input *) ev;
+			if (input->sender.compare("env") == 0){
+				for (int j=0; j<i; j++){
+					ev = lst.at(j);
+					if (dynamic_cast<Output *>(ev) != NULL){
+						Output *output = (Output *) ev;
+						if (output->label.compare(input->label) == 0 && output->receiver.compare(input->receiver) == 0){
+							input->sender = output->sender;
+						}
+					}
+				}
 			}
 		}
 	}
 
-	//the last event is  Delay
-	if (size() > 0)
-		if (dynamic_cast<Delay*>(at(size() - 1)) != NULL){
-			//erase(end());
-			erase(begin() + size() - 1);
-		}
+	return lst;
+
 }
 
 void TestCase::print(std::ostream& os){
@@ -47,6 +80,9 @@ void TestCase::print(std::ostream& os){
 
 
 int TestCase::add(IfLabel *label){
+	if (label == NULL)
+		return 0;
+
 	int n=label->getLength();
 	int d=0;
 	for (int i=0; i<n; i++){
@@ -57,6 +93,20 @@ int TestCase::add(IfLabel *label){
 		}
 	}
 	return d;
+}
+
+TestCase TestCase::concat(TestCase t){
+	TestCase tc;
+	tc.reserve(size() + t.size());
+	int n = size();
+	for (int i=0; i<n; i++)
+		tc.push_back(at(i));
+
+	n = t.size();
+	for (int i=0; i<n; i++)
+		tc.push_back(t.at(i));
+
+	return tc;
 }
 
 set<string> TestCase::getPartners(){
@@ -94,17 +144,19 @@ TestCase TestCase::project(string partner) {
 			//consider only event related to the partner
 			if (partner.compare(sender) == 0 || partner.compare(receiver) == 0){
 
-				//an observation
-				if (sender.compare("env") != 0 && receiver.compare("env") != 0){
-					localTestCase.push_back(ev->copy());
-				}
-				// ? env-->partner
-				else if (dynamic_cast<Input *> (ev) != NULL && sender.compare("env") == 0){
-					localTestCase.push_back(new Output("t", label, receiver));
+				// ? -- -->partner
+				if (dynamic_cast<Input *> (ev) != NULL){
+					if (sender.compare("env") == 0)
+						localTestCase.push_back(new Output("t", label, receiver));
+					else if (partner.compare(receiver) == 0)
+						localTestCase.push_back(ite->copy());
 				}
 				// ! partner --> env
-				else if (dynamic_cast<Output *> (ev) != NULL && receiver.compare("env") == 0){
-					localTestCase.push_back(new Input(sender, label, "t"));
+				else if (dynamic_cast<Output *> (ev) != NULL){
+					if (receiver.compare("env") == 0)
+						localTestCase.push_back(new Input(sender, label, "t"));
+					else if (partner.compare(sender) == 0)
+						localTestCase.push_back(ite->copy());
 				}
 
 			}

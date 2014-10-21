@@ -1,4 +1,6 @@
 Test-GenIFx
 ===========
 
-Test generation from IF specification for distributed testing
+Automatic test cases generation from an IF specification for distributed testing
+
+

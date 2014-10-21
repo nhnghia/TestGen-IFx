@@ -8,6 +8,9 @@
 #include "Event.h"
 #include "Tool.h"
 #include <typeinfo>
+#include <regex>
+#include <string>
+
 namespace tsp {
 
 Event::Event(std::string l) {
@@ -89,6 +92,16 @@ Event* Event::parser(IfEvent *ev){
 				}
 			}
 		}
+
+		//label = p1={distance=1, speed=2},p2=3
+		//remove p1=, p2= .. from label
+		std::regex exp ("p(\\d+)=");
+		label = std::regex_replace(label, exp, "");
+
+		//label = {distance=1, speed=2},3
+		//remove distance=, speed=, ..
+		std::regex exp2("(\\w+)=");
+		label = std::regex_replace(label, exp2, "");
 	}
 
 

@@ -14,17 +14,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include "simulator.h"
+#include <vector>
 
 StateList::StateList() {
 	pos_current = 0;
-	output_suite.open("output.suite", ios_base::app);
-	if (!output_suite)
-		printf("\n ### File 'OUTPUT.SUITE' not open #### \n");
+	LocalDepth = 0;
 }
 
 StateList::~StateList() {
-
-	output_suite.close();
 	_state.clear();
 }
 
@@ -37,13 +35,20 @@ void StateList::put(StateNode p) {
 	_state.insert(i, p);
 }
 
-void StateList::put(IfConfig* s, long int depth, long int father) {
-	list<StateNode>::iterator i = _state.end();
+void StateList::put(IfConfig* s, long int depth, long int father, IfLabel *label) {
+
 	StateNode p;
 	p.state = s;
 	p.pos = pos_current;
 	p.depth = depth + 1;
 	p.father = father;
+
+	if (label != NULL){
+		p.label = label->copy();
+	}
+
+
+	list<StateNode>::iterator i = _state.end();
 	_state.insert(i, p);
 	pos_current++;
 	return;
@@ -137,7 +142,7 @@ bool StateList::getFather(IfConfig* s, StateNode& p) {
 
 bool StateList::getFather(StateNode n, StateNode& p) {
 	list<StateNode>::iterator i;
-	if ((n.father == -1)) {
+	if (n.father == -1) {
 		p = n;
 		return true;
 	}
@@ -170,21 +175,29 @@ void StateList::printPath(IfConfig* s) {
 	} while ((node.father != -1) && (found));
 }
 
-void StateList::getPath(StateNode state_node) {
-	StateNode n, node;
+vector<IfLabel *> StateList::getPath(StateNode state_node) {
+	StateNode nod, node;
 	bool found;
+	vector<IfLabel *> lst;
+	int maxDepth = 0;
 
-	if (state_node.father == -1)
-		return;
-	else {
-		n = state_node;
+	if (state_node.father == -1){
+		return lst;
+	}else {
+		nod = state_node;
+
 		do {
-			found = getFather(n, node);
+			found = getFather(nod, node);
 			if (found) {
-				n = node;
+				//print_aldebaran_suite(n.father, n.label_id, n.pos);
+				if (nod.label != NULL)
+					lst.insert(lst.begin(), nod.label);
+				//testCase.insert(testCase.end(), n.testCase.begin(), n.testCase.end());
+				nod = node;
 			}
 		} while ((node.father != -1) && (found));
 	}
+	return lst;
 }
 
 long int StateList::getSize() {

@@ -38,8 +38,6 @@ struct Transition{
 	};
 	queue<vector<Transition> > m_queue;
 	vector<Transition> currentQueue;
-
-	int numTestCases;
 };
 
 } /* namespace tsp */

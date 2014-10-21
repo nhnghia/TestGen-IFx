@@ -7,7 +7,7 @@
 
 #include "Explorator.h"
 #include "Tool.h"
-
+#include <regex>
 #include <xercesc/util/PlatformUtils.hpp>
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/dom/DOM.hpp>
@@ -23,13 +23,18 @@
 namespace tsp {
 
 void Explorator::printTestCase(){
+	testCase = testCase.optimize();
+
+	if (testCase.size() == 0)
+		return;
+
 	numberOfTestCasesGenerated ++;
 	printf(" \b\b\b\b\b\b\b\b\b\b\b\b %10d ", numberOfTestCasesGenerated);
 	fflush(stdout);
 
 	//return;
 	stringstream ss;
-	ss << testCasesFolder <<"/" <<(numberOfTestCasesGenerated + 1) <<"_";
+	ss << testCasesFolder <<"/" <<(numberOfTestCasesGenerated) <<"_";
 	string path = ss.str();
 
 
@@ -43,7 +48,7 @@ void Explorator::printTestCase(){
 		return;
 	}
 
-	testCase.optimize();
+
 	testCase.print(out);
 	out.close();
 
@@ -59,10 +64,9 @@ void Explorator::printTestCase(){
 			tcFilename.append(".tc");
 
 			ofstream o(tcFilename);
-			o <<"test";
 			TestCase t = testCase.project(p);
 			//t.print(cout);
-			t.optimize();
+			t = t.optimize();
 			t.print(o);
 			o.close();
 		}
@@ -536,6 +540,8 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 	int k = 0;
 	int i;
 	bool hit;
+//cout <<"=====================================================" <<endl;
+//	cout <<endl <<"---" <<endl <<sourceState->string() <<"---" <<endl <<targetState->string() <<endl <<"---" <<endl;
 
 	for (i = 0; i < numPurposes; i++)
 		purposes[i].visited = false;
@@ -556,7 +562,7 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 					hit = false;
 			}
 			if (hit && purposes[k].process != NULL) {
-
+//cout <<"process " <<endl;
 				sourceStateInstance = checkProcessInstance(sourceState,
 						purposes[k].process, depth);
 				if (sourceStateInstance == NULL) {
@@ -567,7 +573,8 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 			} else
 				hit = false;
 
-			if (hit && purposes[k].source != NULL) {
+			if (hit && purposes[k].source != NULL && sourceStateInstance != NULL) {
+//cout <<"===source " <<purposes[k].source <<endl;
 				tmpDepth = checkState(sourceStateInstance, purposes[k].source,
 						depth);
 				if (tmpDepth == -1)
@@ -575,8 +582,11 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 			}
 
 			if (hit && purposes[k].target != NULL) {
+//cout <<"===target " <<purposes[k].target <<endl;
+
 				targetStateInstance = checkProcessInstance(targetState,
 						purposes[k].process, depth);
+
 				if (targetStateInstance != NULL) {
 					tmpDepth = checkState(targetStateInstance,
 							purposes[k].target, depth);
@@ -584,6 +594,7 @@ long int Explorator::checkPurpose(const IfConfig* sourceState,
 						hit = false;
 				} else
 					hit = false;
+
 			}
 
 			if (hit && purposes[k].numVariables > 0)
@@ -755,27 +766,30 @@ void Explorator::getParameterValue(IfLabel* label, char* signal_name,
 	int n = label->getLength();
 	IfEvent *ev;
 	string param = "";
+	string signalName = string(signal_name);
+
 	for (int i=0; i<n; i++){
 		ev = label->getAt(i);
 		if (ev->getKind() == getTypeSignal(signal_type_name)){
-			string str = ev->getValue();	//Submit{p1=3,p2=7}
-			//extract parameters "{p1=3,p2=7}" to "{3,7}"
-			vector<string> vs = tsp::Tool::split(str, '{');
-			if (vs.at(0).compare(string(signal_name)) != 0)
-				continue;
+			string str = ev->getValue();	//Submit{p1={distance=3, speed=1},p2=7}
 
-			str = vs.at(1); //p1=3,p2=7}
-			str = tsp::Tool::split(str, '}').at(0);	//p1=3,p2=7
-			vs = tsp::Tool::split(str, ',');
-			for (string s : vs){
-				if (param.size() == 0)
-					param = tsp::Tool::split(str, '=').at(1);
-				else
-					param = param + string(",") + tsp::Tool::split(str, '=').at(1);
-			}
+			if (str.compare(0, signalName.size(), signalName) != 0)
+				continue;
+			//extract parameters "{p1={distance=3, speed=1},p2=7}" to "{{distance=3, speed=1},7}"
+
+			str = str.substr(signalName.size()); //p1={distance=3, speed=1},p2=7}
+			//str = p1={distance=1, speed=2},p2=3
+			//remove p1=, p2= .. from label
+			std::regex exp ("p(\\d+)=");
+			str = std::regex_replace(str, exp, "");
+
+			//str = {distance=1, speed=2},3
+			//remove distance=, speed=, ..
+			std::regex exp2("(\\w+)=");
+			str = std::regex_replace(str, exp2, "");
+			param = str;
 		}
 	}
-	param = string("{") + param + string("}");
 	strcpy(parameter, param.c_str());
 }
 
@@ -802,7 +816,7 @@ long int Explorator::checkActiveClock(bool order, IfInstance *state, int ind,
 	bool hit = true;
 	int clock_id = -2;
 
-cout <<"number of clock " <<numActiveClocks <<endl;
+//cout <<"number of clock " <<numActiveClocks <<endl;
 
 	while (hit && i < numActiveClocks) {
 		if (order) {
@@ -1030,6 +1044,25 @@ long int Explorator::checkSignal(bool order, IfLabel* label, int ind,
 IfInstance* Explorator::checkProcessInstance(const IfConfig *state,
 		char* processInstanceName, long int depth) {
 
+/* tsp::Tool::ifObject2Xml(state->getAt(j)->getAt(i)
+<IfInstance type="RBC_to_OBU" >
+</IfInstance>
+
+<IfInstance type="OBU_to_RBC" >
+</IfInstance>
+
+<IfInstance type="OBU" state="top:TEMP" >
+<var>
+<OBU_var>
+<m><MovementAuthority>
+<distance><integer value='0' /></distance><speed><integer value='0' /></speed></MovementAuthority>
+</m><v><integer value='0' /></v><c0><clock id='-1' /></c0><c><clock id='-1' /></c><l><integer value='0' /></l><rbc><pid name='RBC' no='0' /></rbc></OBU_var>
+</var>
+<par>
+<void/></par>
+</IfInstance>
+ */
+
 	string s;
 	int l = 0;
 	int i = 0;
@@ -1046,12 +1079,15 @@ IfInstance* Explorator::checkProcessInstance(const IfConfig *state,
 			if (c2 == NULL)
 				continue;
 
+			//cout << tsp::Tool::ifObject2Xml(c2) <<endl;
 			string txt = c2->string();
 			//cout <<"----"<<txt <<"----"<<endl;
 			vector<string> el = Tool::split(txt, '\t');
+
 			//for (string procname : el){
 			string procname = el.at(0);
 				if (procname.compare(processInstanceName) == 0){
+					//cout <<"checkprocess" <<procname <<endl;
 					return c2;
 				}
 			//}
@@ -1076,13 +1112,54 @@ long int Explorator::checkState(IfInstance *state, char* searchedState,
 	if (searchedState == NULL || state == NULL)
 		return -1;
 
+/*
+ * tsp::Tool::ifObject2Xml(state)
+ <IfInstance type="OBU" state="top:TEMP">
+	<var>
+		<OBU_var>
+			<m>
+				<MovementAuthority>
+					<distance>
+						<integer value="0"/>
+					</distance>
+					<speed>
+						<integer value="0"/>
+					</speed>
+				</MovementAuthority>
+			</m>
+			<v>
+				<integer value="0"/>
+			</v>
+			<c0>
+				<clock id="-1"/>
+			</c0>
+			<c>
+				<clock id="-1"/>
+			</c>
+			<l>
+				<integer value="1"/>
+			</l>
+			<rbc>
+				<pid name="RBC" no="0"/>
+			</rbc>
+		</OBU_var>
+	</var>
+	<par>
+		<void/>
+	</par>
+</IfInstance>
+ */
+
 	DOMDocument *doc = tsp::Tool::parserXml(tsp::Tool::ifObject2Xml(state));
 	if (doc == NULL)
 		return -1;
+
 	string s = tsp::Tool::getXmlAttributeValue(doc, "state");
 	//s = top:s0 ==> get s0
+
 	if (s.find(':') != std::string::npos)
 		s = tsp::Tool::split(s, ':').at(1);
+//cout <<"checkState " << s <<"--" << searchedState <<endl;
 	if (s.compare(string(searchedState)) == 0)
 		return depth;
 	return -1;
@@ -1097,6 +1174,9 @@ long int Explorator::checkState(IfInstance *state, char* searchedState,
 
 void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
 		char value[VALUE]) {
+	char *s = "";
+	strcpy(value, s);
+
 	if (state == NULL)
 		return;
 
@@ -1104,7 +1184,12 @@ void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
 	if (doc == NULL)
 		return;
 
-	DOMNodeList* list = doc->getElementsByTagName(XMLString::transcode(searchedVariable));
+	string varName(searchedVariable);
+
+	vector<string> varNames = tsp::Tool::split(varName, '.');
+
+	DOMNodeList* list = doc->getElementsByTagName(
+			XMLString::transcode(varNames[0].c_str()));
 	if (list == NULL)
 		return;
 
@@ -1112,8 +1197,21 @@ void Explorator::getVariableValue(IfInstance *state, char *searchedVariable,
 	if (node == NULL)
 		return;
 
+	//cout <<tsp::Tool::xmlNode2String(node) <<endl;
+	//eg m.speed
+	int n = varNames.size();
+	for (int i=1; i<n; i++){
+		node = tsp::Tool::getXmlNodeByTagName(node, varNames.at(i));
+		if (node == NULL)
+			return;
+	}
+
+
+
 	string str = tsp::Tool::getXmlAttributeValue(node, "value");
 	strcpy(value, str.c_str());
+
+	//cout <<varName <<" = " <<str <<endl;
 }
 
 /*
@@ -1127,6 +1225,22 @@ void Explorator::getClockId(IfInstance *state, char *searchedClock, int *id) {
 	if (state == NULL)
 		return;
 
+	DOMDocument *doc = tsp::Tool::parserXml(tsp::Tool::ifObject2Xml(state));
+	if (doc == NULL)
+		return;
+
+	DOMNodeList* list = doc->getElementsByTagName(XMLString::transcode(searchedClock));
+	if (list == NULL)
+		return;
+
+	DOMNode *node = list->item(0);	//<x><integer value="0"/></x>
+	if (node == NULL)
+		return;
+
+	string str = tsp::Tool::getXmlAttributeValue(node, "id");
+	*id = atoi(str.c_str());
+	//cout <<*id <<endl;
+	/*
 	int d = -1;
 	FILE *f1, *f2;
 	state->printXML(cout);
@@ -1158,7 +1272,7 @@ void Explorator::getClockId(IfInstance *state, char *searchedClock, int *id) {
 				}
 			}
 		}
-	}
+	}*/
 }
 
 /*

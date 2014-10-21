@@ -28,7 +28,7 @@ void HitOrJump::visitAll(int depthlim) {
 
 	IfConfig* start = m_engine->start();
 	m_queue.put(start, -1, -1);
-	output_queue.put(start, -1, -1);
+	output_queue.put(start, -1, -1, NULL);
 
 
 	char c[6] = {'|', '/', '-', '|', '\\', '-'};
@@ -46,18 +46,20 @@ void HitOrJump::visitAll(int depthlim) {
 
 			if (state_node.depth > (depthlim - 1 + raiz)) {
 				jump_counter++;
-				printf("\n >>>> a Jump from State at Depth %ld to State at Depth %ld - Depth Limit = %d  \n",
-						raiz, state_node.depth, depthlim);
+				printf("\b\b\b\r >>>> a Jump from State at Depth %ld to State at Depth %ld     ",
+						raiz, state_node.depth);
 				//printf("_________________________________________________________________\n");
 
 				m_queue.put(state_node);
 				jump_node = random_jump();
-				output_queue.getPath(jump_node);
+
+				vector<IfLabel *> lst = output_queue.getPath(jump_node);
+				addLabelsToTestCase(lst);
 				//system(
 				//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 				//testCase.print(cout);
-				printTestCase();
-				testCase.clear();
+				//printTestCase();
+				//testCase.clear();
 
 				output_queue.clear();
 				m_queue.clear();
@@ -69,9 +71,6 @@ void HitOrJump::visitAll(int depthlim) {
 				jump_node.father = -1;
 				output_queue.put(jump_node);
 			}
-
-			cout <<"OK"; fflush(stdout);
-
 			m_engine->run(state_node.state);
 
 		}
@@ -108,18 +107,17 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 	bool exist = false;
 	long int tmpDepth = -1;
 
-
 	if ((state_node.depth + 1) != hit_position) {
-		cout <<"OkK"; fflush(stdout);
+
 		if (output_queue.getPos(target) == -1) {
 			m_queue.put(target, state_node.depth, state_node.pos);
-			testCase.add(label);
-			output_queue.put(target, state_node.depth, state_node.pos);
+			//print_label(label_id, label);
+			output_queue.put(target, state_node.depth, state_node.pos, label);
 			depth = state_node.depth + 1;
 		} else {
 			exist = true;
-			StateNode target_node;
-			output_queue.getNode(target, target_node);
+			//StateNode target_node;
+			//output_queue.getNode(target, target_node);
 			depth = state_node.depth + 1;
 		}
 
@@ -127,22 +125,30 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			tmpDepth = checkTestPurpose(source, label, target, depth);
 
 		if (exist && (tmpDepth == -2 || tmpDepth >= 0)) {
-			testCase.add(label);
+			//label_id++;
+			//print_label(label_id, label);
+			//lstLabels.push_back(label);
 		}
 
 		if (tmpDepth == -2) {
 			StateNode source_node, target_node;
-			output_queue.getNode(target, target_node);
+			//output_queue.getNode(target, target_node);
 			output_queue.getNode(source, source_node);
-			output_queue.getPath(source_node);
+			//output_queue.print_aldebaran_suite(source_node.pos, label_id, target_node.pos);
+			testCase.add(label);
+
+			vector<IfLabel *> lst = output_queue.getPath(source_node);
+			addLabelsToTestCase(lst);
+
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			//testCase.print(cout);
+			printf("Number of test case: %10d", 1);
 			printTestCase();
-			testCase.clear();
 
 			saveStat(1);
 			saveTestPurposes();
+			printf("\n\n");
 			exit(1);
 		}
 
@@ -157,12 +163,13 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			stateQNode target_state;
 			output_queue.getNode(target, target_node);
 			output_queue.getNode(source, source_node);
-			output_queue.getPath(source_node);
+			//output_queue.print_aldebaran_suite(source_node.pos, label_id, target_node.pos);
+			testCase.add(label);
+			vector<IfLabel *> lst = output_queue.getPath(source_node);
+			addLabelsToTestCase(lst);
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			//testCase.print(cout);
-			printTestCase();
-			testCase.clear();
 
 			m_queue.clear();
 			output_queue.clear();
@@ -178,4 +185,9 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 	}
 }
 
+void HitOrJump::addLabelsToTestCase(vector<IfLabel *> lst){
+	int n = lst.size();
+	for (int i=0; i<n; i++)
+		testCase.add(lst.at(i));
+}
 } /* namespace tsp */

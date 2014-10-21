@@ -19,6 +19,8 @@ Main file: mainExplorator.C
 #include <string.h>
 #include "state_stack.h"
 #include "simulator.h"
+#include <vector>
+#include "TestCase.h"
 
 using namespace std;
 
@@ -27,6 +29,7 @@ struct StateNode {
   long int pos;
   long int depth;
   long int father;
+  IfLabel *label;
 } ;
 
 class StateList{
@@ -34,7 +37,7 @@ class StateList{
   StateList();
   ~StateList();
   void clear();
-  void put (IfConfig* s,long int depth, long int father);
+  void put (IfConfig* s,long int depth, long int father, IfLabel *label);
   void put (StateNode p);
   void update (StateNode p);
   void remove_state(IfConfig* s);
@@ -49,14 +52,13 @@ class StateList{
   StateNode getNode(long int pos,long int init);
   long int getFatherId(IfConfig* s);
   void printPath(IfConfig* s);
-  void getPath(StateNode state_node); 
+  vector<IfLabel *> getPath(StateNode state_node);
   void dump_list();
   long int getSize();
   IfConfig* get();
   bool isEmpty();
   
 protected:
-  ofstream output_suite;    
   
  private:
   list<StateNode> _state;

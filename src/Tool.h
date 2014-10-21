@@ -40,22 +40,28 @@ public:
 	static bool initXmlEngine();
 	static bool endXmlEngine();
 
-	static string xmlNode2String(DOMNode *node);
+	static string xmlNode2String(const DOMNode *node);
 
 	static DOMDocument *parserXml(string txt);
 
 	/**
 	 * return value of the first attribute that has "name"
 	*/
-	static string getXmlAttributeValue(DOMNode *node, string name);
+	static string getXmlAttributeValue(const DOMNode *node, string name);
+
+	/**
+	 * return a DOMNode of the first element that has "name"
+	*/
+	static DOMNode* getXmlNodeByTagName(const DOMNode *node, string name);
+
 
 	/**
 	 * return value of the first element that has "name"
 	 */
-	static string getXmlElementValue(DOMNode *node, string name);
+	static string getXmlElementValue(const DOMNode *node, string name);
 
 	//IfObject
-	static string ifObject2Xml(IfObject *obj);
+	static string ifObject2Xml(const IfObject *obj);
 
 };
 

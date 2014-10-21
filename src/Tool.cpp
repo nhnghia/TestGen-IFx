@@ -101,7 +101,7 @@ DOMDocument* tsp::Tool::parserXml(string myxml) {
 	return doc;
 }
 
-string tsp::Tool::xmlNode2String(DOMNode* node) {
+string tsp::Tool::xmlNode2String(const DOMNode* node) {
 	if (!initXmlEngine())
 		return NULL;
 
@@ -125,14 +125,14 @@ string tsp::Tool::xmlNode2String(DOMNode* node) {
 
 }
 
-string tsp::Tool::getXmlAttributeValue(DOMNode *node, string name) {
+string tsp::Tool::getXmlAttributeValue(const DOMNode *node, string name) {
 	if (!initXmlEngine())
 		return NULL;
 
 	if (node->getNodeType() &&  // true is not NULL
 			node->getNodeType() == DOMNode::ELEMENT_NODE) // is element
 					{
-		DOMElement* elem = dynamic_cast<xercesc::DOMElement*>(node);
+		const DOMElement* elem = (DOMElement*)(node);
 		const XMLCh *val = elem->getAttribute(XMLString::transcode(name.c_str()));
 		string str = XMLString::transcode(val);
 		if (!str.empty()){
@@ -150,15 +150,44 @@ string tsp::Tool::getXmlAttributeValue(DOMNode *node, string name) {
 	return "";
 }
 
-string tsp::Tool::getXmlElementValue(DOMNode *node, string name) {
+DOMNode* tsp::Tool::getXmlNodeByTagName(const DOMNode *node, string name) {
+	if (!initXmlEngine())
+		return NULL;
+
+	if (node->getNodeType() &&  // true is not NULL
+			node->getNodeType() == DOMNode::ELEMENT_NODE) // is element
+					{
+		//const DOMElement* elem = (DOMElement*)(node);
+
+		string str = XMLString::transcode(node->getNodeName());
+		if (str.compare(name) == 0)
+			return node->cloneNode(true);
+	}
+
+	DOMNodeList* list = node->getChildNodes();
+	int n = list->getLength();
+	for (XMLSize_t i = 0; i < n; i++) {
+		DOMNode *n = tsp::Tool::getXmlNodeByTagName(list->item(i), name);
+		if (n != NULL)
+			return n;
+	}
+	return NULL;
+}
+
+string tsp::Tool::getXmlElementValue(const DOMNode *node, string name) {
 	if (!initXmlEngine())
 			return NULL;
 }
 
-string tsp::Tool::ifObject2Xml(IfObject* obj) {
+string tsp::Tool::ifObject2Xml(const IfObject* obj) {
 	if (obj == NULL)
-		return NULL;
-	stringstream buf;
-	obj->printXML(buf);
-	return buf.str();
+		return "";
+	try{
+		stringstream buf;
+		obj->printXML(buf);
+		return buf.str();
+	}catch (exception &e){
+		fprintf(stderr, "%s", e.what());
+		return "";
+	}
 }

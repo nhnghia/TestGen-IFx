@@ -30,6 +30,14 @@ public:
 	 */
 	int add(IfLabel *label);
 	void print(std::ostream&);
+
+	/**
+	 * concat two Test cases
+	 * @param t
+	 * @return
+	 */
+	TestCase concat(TestCase t);
+
 	/**
 	 * get a local test case of a partner
 	 * @param partner name of the partner
@@ -45,10 +53,10 @@ public:
 	void printMsc(ostream &);
 
 	/**
-	 * Cumulate a sequence of consecutive delays to unique one
+	 * Sum up a sequence of consecutive delays to unique one
 	 * and remove the last event if it is a delay
 	 */
-	void optimize();
+	TestCase optimize();
 
 
 	/**

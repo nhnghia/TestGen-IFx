@@ -38,7 +38,7 @@
 	${IF}/bin/`${IF}/com/arch`/if2m4 $(TIME) $*.if
 
 clean:
-	-rm -f *~ $*.exe $*.g $*.x $*.y $*.so $*.o $*.h $*.C $*.m4 
-	-rm -f *~ *.exe *.g *.x *.y *.so *.o *.h *.C *.m4 output.* *.txt output.*.* message.xml *.value *.sequence *.suite
+	-rm -f *~ $*.exe $*.g $*.x $*.y $*.so $*.o $*.h $*.C $*.m4 >> /dev/null
+	-rm -f *~ *.exe *.g *.x *.y *.so *.o *.h *.C *.m4 output.* *.txt output.*.* message.xml *.value *.sequence *.suite >> /dev/null
 
 

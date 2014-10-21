@@ -4,48 +4,55 @@ src=${TestGenIFx}/src
 working=${TestGenIFx}/working
 LIB="${TestGenIFx}/lib"
 
-while getopts "f:d:s:p:c:" option;
+while getopts "i:d:s:o:c:p:t:" option;
   do
   case $option in
-      f)
+      i)
       spec_file="$OPTARG";;
       d)
       maxdepth="$OPTARG";;
       s)
       strategy="$OPTARG";;
-      p)
+      t)
       suite="$OPTARG";;
-      c)
+      o)
       output="$OPTARG";;
-  esac
+		p)
+		projection="true";;
+  esac	
 done
 
-rm -Rf $output
-mkdir $output
+rm -Rf $output >> /dev/null
+mkdir $output  >> /dev/null
 
 results="./results_generation.txt"
-rm -f "$results"
-
+rm -f "$results" >> /dev/null
+#clear screen
+clear
+clear
 echo "_________________________________________________________________"
 echo " TestGen-IF Tool: Test suite Generation"
 echo "_________________________________________________________________"
 
 ls "$suite" | while read purpose
   do
-  echo
+  echo "================================================================="
   echo "Test Purpose : $purpose"
-  cp "$suite/$purpose" "$src/test_purpose.C"
+  cp "$suite/$purpose" "$src/test_purpose.C" >> /dev/null
   
   name="$(echo $purpose | cut -d"." -f1)"
   testcase="$output/tc_$name"
   
   cd $src
   echo "Compiling Test Purpose $purpose ..."
+  echo "-----"
   ./compile-tp.sh 
   
   cd $working
+  echo "-----"
   echo "Starting Test Generation for $purpose ..."
-  ./testgenif -f $spec_file -d $maxdepth -s $strategy
+  #echo "./testgenif -i $spec_file -d $maxdepth -s $strategy -o $output $projection"
+  ./testgenif -i $spec_file -d $maxdepth -s $strategy -o $output -p  $projection
   
 #  $LIB/filter-tp.sh output.sequence 	
 #  cp -f "./final.sequence" "$testcase"

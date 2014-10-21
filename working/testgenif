@@ -1,22 +1,24 @@
 #!/bin/sh
-while getopts "f:s:d:p:" option;
+while getopts "i:s:d:o:p:" option;
 do 
 case $option in
-f)
+i)
 spec_file="$OPTARG";;
 s)
 strategy="$OPTARG";;
 d)
 maxdepth="$OPTARG";;
+o)
+output="$OPTARG";;
 p)
-purposes="$OPTARG";;
+projection="-sp";;
 esac
 done
 
 make clean >> /dev/null
 echo
 echo "_________________________________________________________________"
-echo  " TestGen-IF Tool."
+echo  " TestGen-IFx Tool."
 echo "_________________________________________________________________"
 echo ""
 echo "_________________________________________________________________"
@@ -37,21 +39,10 @@ echo "	IF specification: $spec_file.if"  >> "output.stat"
 echo "	Strategy: $strategy" >> "output.stat"
 echo "	Depth limit: $maxdepth" >> "output.stat"
 
-before="$(date +%s)"
-./$spec_file.g -$strategy -d $maxdepth -p $purposes  
-after="$(date +%s)"
+#echo "$spec_file.g -$strategy -d $maxdepth -o $output  $projection"
 
-#rm -f "./output.label" "./output.suite" "./output.id" "./output.value" "./output.xml" "./message.xml"  "./parameter.value"
+./$spec_file.g -$strategy -d $maxdepth -o $output  $projection
 
-#duration of test generation
-elapsed_seconds="$(expr $after - $before)"
-hours="$(expr $elapsed_seconds / 3600)"
-tmp1="$(expr $hours \* 3600)"
-tmp2="$(expr $elapsed_seconds - $tmp1)"
-minutes="$(expr $tmp2 / 60)"
-seconds="$(expr $tmp2 - $minutes \* 60)"
-echo "_________________________________________________________________"
-echo "	Elapsed time for test generation: $hours:$minutes:$seconds"
 echo "_________________________________________________________________"
 echo "	>>> 	output.sequence file for test sequence"
 echo "	>>> 	output.stat file for statistics"
