@@ -44,7 +44,6 @@ void Exhaustive::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 					Transition t = trans.at(i);
 					testCase.add(t.label);
 				}
-				testCase.print(cout);
 				printTestCase();
 		}else
 			m_queue.push(trans);
@@ -62,21 +61,23 @@ void Exhaustive::visitAll(int depth) {
 
 	//for (int i=0; i<3; i++)
 	//	cout <<IfMessage::SIGNAME[i] <<endl;
-	printf ("\nGenerating test cases: %10d ", 0);
+	printf ("\nGenerating test cases: \n ");
 	fflush(stdout);
 
 
-	currentQueue.clear();
 	while (!m_queue.empty())
 		m_queue.pop();
 
-	IfConfig* start = m_engine->start();
-	m_engine->run(start);
+	vector<Transition>().swap(currentQueue);
 
-	printf (" - ");
-		fflush(stdout);
+	IfConfig* start = m_engine->start();
+	//all outgoing transition from start will be visited after this call
+	m_engine->run(start);	//this will call explore(start, ..., ...)
+
 	while(!m_queue.empty()){
 
+		//delete currentQueue;
+		vector<Transition>().swap(currentQueue);
 
 		if (isDfs)
 			currentQueue = m_queue.back();

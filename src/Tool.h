@@ -63,6 +63,12 @@ public:
 	//IfObject
 	static string ifObject2Xml(const IfObject *obj);
 
+	/**
+	 * return a hash of a string
+	 * @param str
+	 */
+	static unsigned long hash(const char* str);
+
 };
 
 } /* namespace tsp */

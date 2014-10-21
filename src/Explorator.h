@@ -76,6 +76,7 @@ protected:
 			char* signal_type_name, char parameter[300]);
 
 protected:
+	std::set<unsigned long> testCasesHash;
 	int maxDepth;
 	int currentDepth;
 

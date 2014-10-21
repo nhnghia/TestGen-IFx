@@ -4,7 +4,7 @@
  *  Created on: 27 juin 2014
  *      Author: nhnghia
  */
-
+#include <algorithm>
 #include "Explorator.h"
 #include "Tool.h"
 #include <regex>
@@ -27,9 +27,21 @@ void Explorator::printTestCase(){
 
 	if (testCase.size() == 0)
 		return;
+	//check if exists a test case that is similar
+
+	stringstream ss1;
+	testCase.print(ss1);
+	string str = ss1.str();
+	unsigned long hash = tsp::Tool::hash(str.c_str());
+	//cout <<hash <<endl <<str <<endl;
+	if (testCasesHash.find(hash) != testCasesHash.end())
+		return;
+
+	testCasesHash.insert(hash);
+
 
 	numberOfTestCasesGenerated ++;
-	printf(" \b\b\b\b\b\b\b\b\b\b\b\b %10d ", numberOfTestCasesGenerated);
+	printf(" \b\r   Number of Test Cases: %d ", numberOfTestCasesGenerated);
 	fflush(stdout);
 
 	//return;
