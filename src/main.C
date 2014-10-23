@@ -21,7 +21,7 @@
 #include "HitOrJump.h"
 #include "Explorator.h"
 #include "RandomExplorator.h"
-
+#include <cstdlib>
 
 /**
  * hander error, exception happened in the program
@@ -35,16 +35,17 @@ void handler(int sig) {
 
 
 class Stat{
-	struct timeval tp;
 	long int ms;
 public:
 	tsp::Explorator *expl;
-	Stat(){
+	void begin(){
+		struct timeval tp;
 		gettimeofday(&tp, NULL);
 		ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 		expl = NULL;
 	}
-	~Stat(){
+	void end(){
+		struct timeval tp;
 		gettimeofday(&tp, NULL);
 		long int ms2 = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
@@ -57,11 +58,15 @@ public:
 	}
 };
 
+Stat stat;
+void exiting(){
+	stat.end();
+}
+
 /* ===== MAIN ===== */
 int main(int argc, char * argv[]) {
-
-	Stat stat;
-
+	stat.begin();
+	std::atexit(exiting);
 	signal(SIGSEGV, handler);   // install our handler of errors
 
 	static const unsigned DEFAULTDEPTH = 10;

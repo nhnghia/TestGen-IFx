@@ -88,7 +88,8 @@ else
 	exit 1
 fi 
 
-./$spec_file.g -$strategy -d $maxdepth -o $output  -p true
+./$spec_file.g -$strategy -d $maxdepth -o $output  -sp
+#-sp : project global test cases to local ones
 
 rm $spec_file.g $spec_file.h >> /dev/null
 
