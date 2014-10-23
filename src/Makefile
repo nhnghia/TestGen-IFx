@@ -23,8 +23,8 @@ $(OBJS): %.o : %.h
 clean:
 	rm -f $(OBJS)
 
-tp:
-	${CC} -c -o Explorator.o $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include Explorator.cpp -lstdc++
+tp: all
+	${CC} -c -o Explorator.o $(CFLAGS) -I${IF}/src/simulator -I${XERCESLIB}/../include Explorator.cpp
 
 install:
-	cp $(OBJS) main.o ../lib >> /dev//null
+	cp $(OBJS) main.o $(TestGenIFx)/lib/

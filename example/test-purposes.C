@@ -31,8 +31,26 @@ for (i=0; i < numOrdPurposes;i++)
 }
 
 purposes[0].process = "{OBU}0";
-purposes[0].source = "INDICATION";
-purposes[0].target = "INTERVENTION";
-purposes[0].numVariables = 1;
-VariableData var = {"v", "180"};
+//purposes[0].source = "INDICATION";
+//purposes[0].target = "INTERVENTION";
+/*
+
+purposes[0].numVariables = 2;
+
+VariableData var = {"v", "190"};
 purposes[0].variables[0] = var;
+
+//m.speed
+VariableData var2 = {"m.speed", "80"};
+purposes[0].variables[1] = var2;
+
+
+purposes[0].numBoundClocks = 0;
+ClockData c = {"c", -1};
+purposes[0].clocks[0] = c	;
+*/
+
+purposes[0].numSignals = 0;
+
+SignalData input = {"MA", "input", "{{0,80}}"};
+purposes[0].signals[0] = input;

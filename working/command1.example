@@ -1,1 +1,0 @@
-./start-generation.sh -f pcep -d 20 -s bfs -p demo/demo_tps/ -c demo/demo_tcs

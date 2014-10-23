@@ -34,11 +34,33 @@ void handler(int sig) {
 }
 
 
+class Stat{
+	struct timeval tp;
+	long int ms;
+public:
+	tsp::Explorator *expl;
+	Stat(){
+		gettimeofday(&tp, NULL);
+		ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+		expl = NULL;
+	}
+	~Stat(){
+		gettimeofday(&tp, NULL);
+		long int ms2 = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+		//Statistic
+		printf("_________________________________________________________________\n");
+		printf("STATISTIC:\n");
+		cout <<"  - Number of test cases generated: " << expl->numberOfTestCasesGenerated <<endl ;
+		cout <<"  - Elapsed time                  : " <<(ms2 - ms)/100.0 <<" seconds" <<endl <<endl ;
+		//printf("_________________________________________________________________\n");
+	}
+};
+
 /* ===== MAIN ===== */
 int main(int argc, char * argv[]) {
-	struct timeval tp;
-	gettimeofday(&tp, NULL);
-	long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+	Stat stat;
 
 	signal(SIGSEGV, handler);   // install our handler of errors
 
@@ -72,6 +94,7 @@ int main(int argc, char * argv[]) {
 	}
 	printf("_________________________________________________________________\n");
 	printf("INPUT:\n");
+
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "-bfs")){
@@ -116,7 +139,10 @@ int main(int argc, char * argv[]) {
 	else if (traversal == RANDOM){
 		expl = new tsp::RandomExplorator(engine);
 	}
+
 	if (expl){
+		stat.expl = expl;
+
 		expl->isProjectTestCases = isProject;
 		if (tc_folder)
 			expl->testCasesFolder = string(tc_folder);
@@ -124,16 +150,8 @@ int main(int argc, char * argv[]) {
 
 		expl->visitAll(depthlim);
 	}
-	//processing time
-	gettimeofday(&tp, NULL);
-	long int ms2 = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
-	//Statistic
-	printf("_________________________________________________________________\n");
-	printf("STATISTIC:\n");
-	cout <<"  - Number of test cases generated: " << expl->numberOfTestCasesGenerated <<endl ;
-	cout <<"  - Elapsed time: " <<(ms2 - ms)/100.0 <<" seconds" <<endl ;
-	printf("_________________________________________________________________\n");
-	cout <<endl <<endl;
+	//processing time
+
 	return 0;
 }

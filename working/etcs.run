@@ -1,1 +1,0 @@
-cd ../src/; make all; make install; cd ../working; ./start-generation.sh -f train -d 2 -s dfs -p etcs/tps/ etcs/tcs

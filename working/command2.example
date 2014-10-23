@@ -1,1 +1,0 @@
-./optimize-test-cases.sh -i demo/demo_tcs/ -o demo/demo_ftcs

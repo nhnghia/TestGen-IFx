@@ -1,1 +1,0 @@
-if2gen $1.if ; ./$1.x -dfs -t $1.txt; aldebaran2dot $1.txt; open $1.dot

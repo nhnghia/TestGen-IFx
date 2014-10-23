@@ -82,7 +82,6 @@ protected:
 
 	TestCase testCase;
 
-	ofstream output_stat;
 	ifstream input_sc;                    //States Format File
 
 	unsigned q_count;                       // state counter

@@ -80,11 +80,9 @@ void HitOrJump::visitAll(int depthlim) {
 			"_________________________________________________________________ \n");
 	printf(" Number of Satisfied Test Purposes = %d/%d. \n",
 			numFoundedTestPurposes, numTestPurposes);
-	printf(" BFS - Number of executed JUMPS = %d. \n", jump_counter);
+	printf(" Number of executed JUMPS = %d. \n", jump_counter);
 	printf(
 			"_________________________________________________________________ \n\n");
-	saveStat(0);
-	saveTestPurposes();
 	exit(1);
 }
 
@@ -135,21 +133,17 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			//output_queue.getNode(target, target_node);
 			output_queue.getNode(source, source_node);
 			//output_queue.print_aldebaran_suite(source_node.pos, label_id, target_node.pos);
-			testCase.add(label);
-
 			vector<IfLabel *> lst = output_queue.getPath(source_node);
 			addLabelsToTestCase(lst);
-
+			testCase.add(label);
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			//testCase.print(cout);
-			printf("Number of test case: %10d", 1);
+			//printf("Number of test case: %10d", 1);
 			printTestCase();
 
-			saveStat(1);
-			saveTestPurposes();
 			printf("\n\n");
-			exit(1);
+			exit(0);
 		}
 
 		if (tmpDepth >= 0) {
@@ -164,9 +158,10 @@ void HitOrJump::explore(IfConfig* source, IfLabel* label, IfConfig* target) {
 			output_queue.getNode(target, target_node);
 			output_queue.getNode(source, source_node);
 			//output_queue.print_aldebaran_suite(source_node.pos, label_id, target_node.pos);
-			testCase.add(label);
+
 			vector<IfLabel *> lst = output_queue.getPath(source_node);
 			addLabelsToTestCase(lst);
+			testCase.add(label);
 			//system(
 			//		"$TestGenIF/lib/generate-path.sh ./output.suite ./output.label");
 			//testCase.print(cout);

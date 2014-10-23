@@ -1,1 +1,0 @@
-cd ../src/; make all; make install; cd ../working; ./start-generation.sh -f $1 -d $4 -s $2 -p $3/demo_tps/ $3/demo_tcs

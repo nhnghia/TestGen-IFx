@@ -4,14 +4,14 @@ const SD = 300;      /*Subset-026.4. A3.1 the safety distance between two ETCS t
 const N_TRAINS = 1; /*The maximum number of Trains at startup */
 const N_RBCS   = 0;
 
-type ID = range 0 .. 100;
-type Location = range 0 .. 10;
-type Distance = range 0 .. 10;
-type Timeout  = range 0 .. 100;
-type Size     = range 1 .. 10;	/*number of sections in a MA*/
+type ID = range 0 .. 0;
+type Location = range 	0 .. 11;
+type Distance = range 0 .. 100;
+type Timeout  = range 0 .. 0;
+type Size     = range 1 .. 1;	/*number of sections in a MA*/
 type Bool     = range 0 .. 1;
 
-const MAX_SPEED = 200;
+const MAX_SPEED = 190;
 type Speed    = range 0 .. MAX_SPEED;
 
 type DangerPointInfo = record
@@ -45,7 +45,7 @@ type EndSection = record
 	overlapInfo OverlapInfo;
 endrecord;
 
-const N_SECTIONS = 5;    /*maximum number of sections in an MA*/
+const N_SECTIONS = 1;    /*maximum number of sections in an MA*/
 type Sections = array [N_SECTIONS] of Section;
 
 /*Struct of Movement Authority*/
@@ -132,6 +132,7 @@ var l Location;
 var rbc pid;
  /* the initial state of the train; the train in this state is not controlled by the RBC */
 state init #start ;
+	deadline delayable;
 	input ELocation(l);
 		rbc := fork RBC(self);
 		output MARequest(l) to rbc;
@@ -139,7 +140,7 @@ state init #start ;
 endstate;
 
 state TEMP ;
-	deadline lazy;
+	deadline delayable;
 	input MA(m);
 		reset c;
 		nextstate NORMAL;
@@ -163,10 +164,12 @@ state INDICATION ;
 		nextstate -;
 	
 //	when c0 > 1;
+	deadline lazy;
 	input ESpeed(v);
 		reset c0;
 		nextstate NORMAL;
 
+	deadline lazy;
 	when c > 60;
 	input ELocation(l);
 		reset c;
@@ -176,11 +179,13 @@ endstate;
 
 
 state INTERVENTION;
+	deadline lazy;
 	provided v = 0;				  /*3.13.10.5.4 ro: standstill*/
 		output EBcmd(0);
 		output DMIcmd(m.speed);
 		nextstate INDICATION;
 		
+	deadline lazy;
 	provided v > 0;
 //	when c0 > 1;
 	input ESpeed(v);
@@ -197,7 +202,7 @@ procedure getReleaseSpeed;
 	fpar d Distance;
 	returns Speed;
    {#
-     return rand() % 50;
+     return 80;//rand() % 5;
    #}
 endprocedure;
 
@@ -211,6 +216,7 @@ var c clock;
 var c1 clock;
 
 state init #start ;
+	deadline delayable;
 	input DLocation(x);
 		set c := 0;
 		set c1 := 0;
@@ -218,10 +224,12 @@ state init #start ;
 endstate;
 
 state IDLE ;
+	deadline delayable;
 	when c > 1;
 	input MARequest(y) ;
 		nextstate MA;
 	
+	deadline delayable;
 	when c1 > 40;
 	input DLocation(x);
 		reset c1;
@@ -231,6 +239,7 @@ state IDLE ;
 endstate;
 
 state MA #unstable ;
+
 		task m.distance := x-y;
 		m.speed := call getReleaseSpeed(x-y);
 		output MA(m) to obu;

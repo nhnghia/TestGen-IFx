@@ -1,6 +1,6 @@
 
   CC = g++
-  LIB = /Users/nhnghia/SudParis/workspace/TestGen-IFx/lib
+  LIB = $(TestGenIFx)/lib
   CFLAGS = -W -Wall -O3 -DABSTRACT -fno-stack-protector -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-variable -Wno-parentheses -Wno-deprecated -Wno-tautological-compare -Wno-overloaded-virtual -g 
   
 .SUFFIXES: 

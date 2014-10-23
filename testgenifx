@@ -1,0 +1,95 @@
+#!/bin/sh
+clear
+echo "_________________________________________________________________"
+echo  " TestGen-IFx Tool."
+echo "_________________________________________________________________"
+echo 
+
+if [ x${IF:-} = x ]; then
+  echo "Please install IF correctly, and set the $IF environment variable"
+  exit 1
+fi
+if [ x${TestGenIFx:-} = x ]; then
+  echo "Please install TestGen-IFx correctly, and set the \$TestGenIFx environment variable"
+  exit 1
+fi
+if [ x${XERCESLIB:-} = x ]; then
+  echo "Please set the XERCESLIB environment variable to point to your Xerces library directory (binary)"
+  exit 1
+fi
+
+#
+# Usage
+#
+
+if [ $# -ne 8 ]; then
+  echo "Usage: testgenifx -i input -s strategy -d maxdepth -t testpurpose"
+  exit 1
+fi
+
+
+#TestGenIFx="/Users/nhnghia/SudParis/workspace/TestGen-IFx"
+SRC=${TestGenIFx}/src
+LIB="${TestGenIFx}/lib"
+
+#parser parameters
+while getopts "i:d:s:o:c:p:t:" option;
+  do
+  case $option in
+      i)
+      spec_file="$OPTARG";;
+      d)
+      maxdepth="$OPTARG";;
+      s)
+      strategy="$OPTARG";;
+      t)
+      suite="$OPTARG";;
+		p)
+		projection="true";;
+  esac	
+done
+
+#get "obu" from "obu.if"
+spec_file=`basename $spec_file .if`
+
+output="./$spec_file"
+
+echo " Clean the output folder: $output"
+rm -Rf $output >> /dev/null
+mkdir -p $output  >> /dev/null
+
+
+CWD=$(pwd)
+
+echo " Compiling test case: $suite ..."
+cp "$suite" "$SRC/test_purpose.C" 
+
+cd $SRC
+make tp >> /dev/null
+if [ $? = 0 ]; then
+  echo "     done"
+else
+	cd $CWD
+	exit 1
+fi
+
+make install  >> /dev/null
+
+#return to the current folder
+cd $CWD
+
+#
+echo " Compiling $spec_file.if file ..."
+make -f $LIB/Makefile "$spec_file.g" >> /dev//null 
+if [ $? = 0 ]; then
+  echo "     done"
+else
+	rm "$spec_file.h"
+	exit 1
+fi 
+
+./$spec_file.g -$strategy -d $maxdepth -o $output  -p true
+
+rm $spec_file.g $spec_file.h >> /dev/null
+
+echo "_________________________________________________________________"
